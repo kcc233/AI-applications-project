@@ -303,36 +303,67 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   background: #071228;
 }
 .moonlit-balcony {
+  --balcony-width: max(100%, calc(100dvh * 1672 / 941));
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: max(100%, calc(100dvh * 1672 / 941));
+  width: var(--balcony-width);
   transform: translateX(-50%);
+}
+@media (max-aspect-ratio: 6/5) {
+  .moonlit-balcony {
+    left: clamp(calc(100% - var(--balcony-width)), calc(50% - var(--balcony-width) * .726), 0px);
+    transform: none;
+  }
 }
 .moonlit-balcony img {
   display: block;
   width: 100%;
   height: auto;
 }
-.moonlit-flame {
+#moonlit-knight {
   position: absolute;
-  top: 53.35%;
-  width: 8.8%;
+  inset: 0;
+  pointer-events: none;
+}
+.moonlit-balcony:focus-visible { outline: 2px solid #7ddbff; outline-offset: -2px; }
+.moonlit-flame, .moonlit-dragon {
+  position: absolute;
   aspect-ratio: 1;
-  transform: translate(-50%, -81.4%);
-  background: url("assets/moonlit/torch-flames.png") 0 0 / 400% 200% no-repeat;
+  background: var(--sprite-sheet) 0 0 / 400% 200% no-repeat;
   image-rendering: pixelated;
   pointer-events: none;
 }
+.moonlit-flame {
+  --sprite-sheet: url("assets/moonlit/torch-flames.png");
+  top: 53.35%;
+  width: 8.8%;
+  transform: translate(-50%, -81.4%);
+}
 .moonlit-flame-left { left: 5.08%; }
 .moonlit-flame-right { left: 94.86%; }
-
-@media (prefers-reduced-motion: no-preference) {
-  .moonlit-world[open] .moonlit-flame { animation: moonlit-flicker .8s step-end infinite; }
-  .moonlit-world[open] .moonlit-flame-right { animation-delay: -.3s; }
+.moonlit-dragon {
+  --sprite-sheet: url("assets/moonlit/dragon-flight.png");
+  top: 33.5%;
+  left: 72.6%;
+  width: 13%;
+  transform: translate(-50%, -50%);
 }
 
-@keyframes moonlit-flicker {
+@media (prefers-reduced-motion: no-preference) {
+  .moonlit-world[open] .moonlit-flame { animation: moonlit-sprite-frames .8s step-end infinite; }
+  .moonlit-world[open] .moonlit-flame-right { animation-delay: -.3s; }
+  .moonlit-world[open] .moonlit-dragon {
+    animation: moonlit-sprite-frames .96s step-end infinite, moonlit-dragon-hover 1.8s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes moonlit-dragon-hover {
+  from { transform: translate(-55%, -48%); }
+  to { transform: translate(-45%, -51%); }
+}
+
+@keyframes moonlit-sprite-frames {
   0% { background-position: 0 0; }
   12.5% { background-position: 33.3333% 0; }
   25% { background-position: 66.6667% 0; }

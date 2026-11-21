@@ -2,6 +2,8 @@
 'use strict';
 const MOVE_SPEED = 225; // Room units per second.
 const WALK_FRAME_RATE = 8; // Animation frames per second, independent of travel.
+const WALK_DIRECTIONS = { ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] };
+const movementDirection = key => WALK_DIRECTIONS[key.length === 1 ? key.toLowerCase() : key];
 const player = { x: 345, y: 467, facing: 1, back: false, walkTime: 0 };
 const obstacles = [
   { left: 202, right: 487, top: 361, bottom: 430 }, // bench plus foot clearance
@@ -282,8 +284,7 @@ canvas.addEventListener('keydown', event => {
   if (event.key === 'Escape' && activeScene === 'doe') {
     event.preventDefault(); returnToMuseum(); return;
   }
-  const directions = { ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] };
-  const direction = directions[event.key.length === 1 ? event.key.toLowerCase() : event.key];
+  const direction = movementDirection(event.key);
   if (!direction || !scene) return;
   event.preventDefault();
   const from = route.length ? route[route.length - 1] : player;
