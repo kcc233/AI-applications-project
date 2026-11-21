@@ -299,14 +299,48 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   margin: 0;
   padding: 0;
   border: 0;
+  overflow: hidden;
   background: #071228;
 }
-.moonlit-world img {
+.moonlit-balcony {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: max(100%, calc(100dvh * 1672 / 941));
+  transform: translateX(-50%);
+}
+.moonlit-balcony img {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center bottom;
+  height: auto;
+}
+.moonlit-flame {
+  position: absolute;
+  top: 53.35%;
+  width: 8.8%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -81.4%);
+  background: url("assets/moonlit/torch-flames.png") 0 0 / 400% 200% no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.moonlit-flame-left { left: 5.08%; }
+.moonlit-flame-right { left: 94.86%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .moonlit-world[open] .moonlit-flame { animation: moonlit-flicker .8s step-end infinite; }
+  .moonlit-world[open] .moonlit-flame-right { animation-delay: -.3s; }
+}
+
+@keyframes moonlit-flicker {
+  0% { background-position: 0 0; }
+  12.5% { background-position: 33.3333% 0; }
+  25% { background-position: 66.6667% 0; }
+  37.5% { background-position: 100% 0; }
+  50% { background-position: 0 100%; }
+  62.5% { background-position: 33.3333% 100%; }
+  75% { background-position: 66.6667% 100%; }
+  87.5% { background-position: 100% 100%; }
 }
 
 .doe-smoke {
