@@ -64,13 +64,17 @@
     </dialog>
     <dialog id="moonlit-world" class="moonlit-world" aria-label="Moonlit Castle balcony">
       <div class="moonlit-balcony" tabindex="0" aria-describedby="moonlit-controls" autofocus>
-        <img src="assets/moonlit/balcony.png" width="1672" height="941" alt="A torchlit stone balcony looks out on a starry sky and cloud-covered mountains.">
-        <span class="moonlit-dragon" role="img" aria-label="A blue dragon flying above the sword"></span>
-        <span class="moonlit-flame moonlit-flame-left" aria-hidden="true"></span>
-        <span class="moonlit-flame moonlit-flame-right" aria-hidden="true"></span>
-        <canvas id="moonlit-knight" width="1672" height="941" aria-hidden="true"></canvas>
+        <div class="moonlit-balcony-view">
+          <img src="assets/moonlit/balcony.png" width="1672" height="941" alt="A torchlit stone balcony looks out on a starry sky and cloud-covered mountains.">
+          <span class="moonlit-dragon" role="img" aria-label="A blue dragon flying above the sword"></span>
+          <span class="moonlit-flame moonlit-flame-left" aria-hidden="true"></span>
+          <span class="moonlit-flame moonlit-flame-right" aria-hidden="true"></span>
+        </div>
+        <canvas id="moonlit-floor" width="1672" height="256" aria-hidden="true"></canvas>
+        <img class="moonlit-carpet" src="assets/moonlit/balcony-carpet.png" width="2172" height="724" alt="">
+        <canvas id="moonlit-knight" width="1672" height="1197" aria-hidden="true"></canvas>
       </div>
-      <p id="moonlit-controls" class="sr-only">Click or tap the stone floor or use the arrow keys or W, A, S, and D to move the knight. Press Escape to return to the museum.</p>
+      <p id="moonlit-controls" class="sr-only">Click or tap the balcony floor or use the arrow keys or W, A, S, and D to move the knight. Press Escape to return to the museum.</p>
       <button id="moonlit-world-back" class="back-button" type="button">Back to museum</button>
     </dialog>
     <dialog id="doe-board-preview" class="doe-board-preview" aria-label="DOE concept sketches">
