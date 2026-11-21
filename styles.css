@@ -289,6 +289,15 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
 .moonlit-preview::backdrop { background: #080f1ae0; }
 .moonlit-preview .doe-enter-world { width: min(100%, var(--moonlit-button-width)); }
 .moonlit-preview button:focus-visible { outline-color: #7ddbff; }
+.moonlit-fire-transition {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 10;
+  background: rgb(0 0 0 / var(--fire-backdrop-opacity, 1));
+  cursor: wait;
+}
 .moonlit-world {
   position: fixed;
   inset: 0;

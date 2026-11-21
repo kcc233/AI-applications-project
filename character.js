@@ -316,6 +316,7 @@ const MOONLIT_FRAME_INDEX = 4;
 const moonlitPortal = document.querySelector('#moonlit-portal');
 const moonlitPreview = document.querySelector('#moonlit-preview');
 const moonlitWorld = document.querySelector('#moonlit-world');
+let openingMoonlitWorld = false;
 const doeConceptBoard = document.querySelector('#doe-concept-board');
 const doeHologram = document.querySelector('#doe-hologram');
 const doeHologramPreview = document.querySelector('#doe-hologram-preview');
@@ -512,16 +513,116 @@ function showMoonlitPreview() {
   if (activeScene === 'museum' && !moonlitPreview.open && !openingDoe) moonlitPreview.showModal();
 }
 
+function maskMoonlitFire(sheet) {
+  const masked = document.createElement('canvas');
+  masked.width = sheet.naturalWidth;
+  masked.height = sheet.naturalHeight;
+  const context = masked.getContext('2d', { willReadFrequently: true });
+  if (!context) return null;
+  context.drawImage(sheet, 0, 0);
+
+  // The sheet has a pale matte. Keep the warm fire colors and feather their edges.
+  let pixels;
+  try {
+    pixels = context.getImageData(0, 0, masked.width, masked.height);
+  } catch (error) {
+    if (error.name !== 'SecurityError') throw error;
+    return null;
+  }
+  const { data } = pixels;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i + 3] *= clamp((data[i] - data[i + 2] - 22) / 68, 0, 1);
+  }
+  context.putImageData(pixels, 0, 0);
+  return masked;
+}
+
+function playMoonlitFire(context, sheet, start, end, duration) {
+  const { width, height } = context.canvas;
+  return new Promise(resolve => {
+    let startedAt;
+    function drawFrame(time) {
+      startedAt ??= time;
+      const progress = Math.min((time - startedAt) / duration, 1);
+      const position = start + (end - start) * progress;
+      const frame = Math.floor(position);
+      const blend = position - frame;
+      context.clearRect(0, 0, width, height);
+      // Blend neighboring frames without making their shared opaque areas translucent.
+      context.globalCompositeOperation = 'lighter';
+      for (const [index, opacity] of [[frame, 1 - blend], [frame + 1, blend]]) {
+        if (opacity <= 0 || index >= 8) continue;
+        context.globalAlpha = opacity;
+        context.drawImage(sheet, index % 4 * width, Math.floor(index / 4) * height,
+          width, height, 0, 0, width, height);
+      }
+
+      // Keep black behind the flames through the cut, then reveal the castle.
+      if (start > 0) {
+        const backdropOpacity = clamp((end - position) / 3, 0, 1);
+        context.canvas.style.setProperty('--fire-backdrop-opacity', backdropOpacity);
+      }
+      context.globalCompositeOperation = 'source-over';
+      context.globalAlpha = 1;
+      if (progress < 1) requestAnimationFrame(drawFrame);
+      else resolve();
+    }
+    requestAnimationFrame(drawFrame);
+  });
+}
+
+async function enterMoonlitWorld() {
+  if (openingMoonlitWorld || !moonlitPreview.open) return;
+  openingMoonlitWorld = true;
+  const fire = document.createElement('canvas');
+  fire.className = 'moonlit-fire-transition';
+  fire.setAttribute('aria-hidden', 'true');
+
+  try {
+    if (!reducedMotion.matches) {
+      moonlitPreview.inert = true;
+      const sheet = new Image();
+      sheet.src = 'assets/moonlit/fire-breath-frames.png';
+      const loaded = await sheet.decode().then(() => true, () => false);
+      if (loaded) {
+        const frames = maskMoonlitFire(sheet);
+        fire.width = sheet.naturalWidth / 4;
+        fire.height = sheet.naturalHeight / 2;
+        const context = fire.getContext('2d');
+        if (frames && context) {
+          moonlitWorld.append(fire);
+          moonlitWorld.showModal();
+          moonlitWorld.inert = true;
+          moonlitPreview.close();
+          await playMoonlitFire(context, frames, 0, 3, 390);
+          await playMoonlitFire(context, frames, 4, 8, 480);
+          return;
+        }
+      }
+    }
+    moonlitPreview.close();
+    moonlitWorld.showModal();
+  } finally {
+    fire.remove();
+    moonlitPreview.inert = false;
+    moonlitWorld.inert = false;
+    openingMoonlitWorld = false;
+    if (moonlitWorld.open) moonlitWorld.querySelector('.moonlit-balcony').focus({ preventScroll: true });
+  }
+}
+
 bindArtworkTilt(document.querySelector('#moonlit-artwork-hover'), moonlitPreview);
 moonlitPortal.addEventListener('click', approachMoonlitExhibit);
 document.querySelector('#moonlit-preview-close').addEventListener('click', () => moonlitPreview.close());
 moonlitPreview.addEventListener('close', () => {
   if (!moonlitWorld.open) moonlitPortal.focus({ preventScroll: true });
 });
-document.querySelector('#moonlit-enter-world').addEventListener('click', () => {
-  moonlitPreview.close();
-  moonlitWorld.showModal();
-});
+document.querySelector('#moonlit-enter-world').addEventListener('click', enterMoonlitWorld);
+for (const dialog of [moonlitPreview, moonlitWorld]) {
+  dialog.addEventListener('cancel', event => {
+    if (openingMoonlitWorld) event.preventDefault();
+  });
+}
 document.querySelector('#moonlit-world-back').addEventListener('click', () => moonlitWorld.close());
 moonlitWorld.addEventListener('close', () => moonlitPortal.focus({ preventScroll: true }));
 
