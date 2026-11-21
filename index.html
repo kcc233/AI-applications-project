@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#c49b55">
+    <meta name="description" content="A quiet, sunlit pixel-art gallery room.">
+    <title>The Gallery</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preload" as="image" href="assets/doe-preview/rising-smoke-frames.png">
+    <link rel="preload" as="image" href="assets/doe-hologram/activation.png">
+    <script src="room.js" defer></script>
+    <script src="doe-scene.js" defer></script>
+    <script src="character.js" defer></script>
+    <script src="doe-carousel.js" defer></script>
+    <script src="airpod-book.js" defer></script>
+    <script src="entrance.js" defer></script>
+  </head>
+  <body>
+    <section id="entrance" class="entrance" aria-label="Museum entrance">
+      <div class="entrance-viewport" aria-hidden="true">
+        <div class="entrance-art">
+          <div class="curator-window">
+            <img class="curator-sprite" src="assets/characters/Museum employee pixel sprite.png" width="1086" height="1448" alt="">
+          </div>
+        </div>
+      </div>
+      <button class="enter-museum" type="button">Enter museum</button>
+    </section>
+    <main class="gallery" aria-label="A sunlit gallery room" inert>
+      <canvas id="room" width="790" height="510" tabindex="0" role="application" aria-describedby="controls" aria-label="A pixel-art museum room in warm afternoon sunlight. Six ornate gold frames display Whack-a-Mole, Puma Dunk, Drizzle App, HTML CSS Project, a moonlit dragon and castle, and a DOE antlered warrior above a wooden bench, with an AirPod Prototype on a marble pedestal on the left and a classical marble bust on the right.">A sunlit gallery with six framed pixel artworks, a playable character, a wooden bench, an AirPod Prototype, and a marble bust.</canvas>
+      <button id="doe-portal" class="artwork-portal" type="button" aria-label="View the DOE poster" aria-haspopup="dialog"></button>
+      <button id="doe-plaque-portal" class="artwork-portal" type="button" aria-label="DOE plaque: view the DOE poster" aria-haspopup="dialog"></button>
+      <button id="airpod-exhibit" class="artwork-portal" type="button" aria-label="Visit the AirPod Prototype and read its project book"></button>
+      <button id="back-to-museum" class="back-button" type="button" hidden>Back to museum</button>
+      <button id="doe-concept-board" class="doe-concept-board" type="button" aria-label="Walk to the DOE concept sketches" aria-haspopup="dialog" hidden>
+        <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+      </button>
+      <button id="doe-hologram" class="doe-hologram" type="button" aria-label="Walk to the DOE assembly hologram" aria-haspopup="dialog" hidden></button>
+      <p id="scene-status" class="scene-status" role="status" hidden></p>
+      <p id="controls" class="sr-only">Click or tap the floor to walk. You can also use the arrow keys or W, A, S, and D. Select the DOE frame to view its poster or the AirPod Prototype to read its project book. Use Back to museum or Escape to return.</p>
+    </main>
+    <div id="doe-smoke" class="doe-smoke" aria-hidden="true" hidden>
+    </div>
+    <dialog id="doe-preview" class="doe-preview" aria-label="DOE poster preview">
+      <button id="doe-preview-close" class="doe-preview-close" type="button" aria-label="Close DOE poster" autofocus><span aria-hidden="true"></span></button>
+      <div id="doe-poster-hover" class="doe-poster-hover">
+        <img class="doe-preview-poster" src="assets/doe-preview/poster.png" width="1296" height="1728" alt="DOE poster featuring the antlered warrior in green armor against a dark red background.">
+      </div>
+      <button id="doe-enter-world" class="doe-enter-world" type="button" aria-label="Enter DOE world">
+        <img src="assets/doe-preview/enter-world.png" width="2172" height="724" alt="">
+      </button>
+    </dialog>
+    <dialog id="doe-board-preview" class="doe-board-preview" aria-label="DOE concept sketches">
+      <button id="doe-board-close" class="doe-preview-close" type="button" aria-label="Close concept board" autofocus><span aria-hidden="true"></span></button>
+      <div class="doe-board-art">
+        <img class="doe-board-back" src="assets/doe-concept/corkboard.png" width="1448" height="1086" alt="">
+        <div class="doe-board-sketches">
+          <button type="button" aria-haspopup="dialog"><img src="assets/doe-concept/IMG_4367.jpg" width="923" height="1557" alt="DOE poster 1 pencil sketch"></button>
+          <button type="button" aria-haspopup="dialog"><img src="assets/doe-concept/IMG_4368.jpg" width="1000" height="1699" alt="DOE poster 2 pencil sketch"></button>
+          <button type="button" aria-haspopup="dialog"><img src="assets/doe-concept/IMG_4369.jpg" width="985" height="1662" alt="DOE poster 3 pencil sketch"></button>
+          <button type="button" aria-haspopup="dialog"><img src="assets/doe-concept/IMG_4371.jpg" width="864" height="1475" alt="DOE poster 4 helmet and lighting study"></button>
+          <button type="button" aria-haspopup="dialog"><img src="assets/doe-concept/IMG_4370.jpg" width="876" height="1447" alt="DOE title lettering sketches"></button>
+        </div>
+      </div>
+    </dialog>
+    <dialog id="doe-sketch-preview" class="doe-sketch-preview" aria-label="DOE sketch close-up">
+      <button id="doe-sketch-close" class="doe-preview-close" type="button" aria-label="Close sketch" autofocus><span aria-hidden="true"></span></button>
+      <div id="doe-sketch-hover" class="doe-poster-hover">
+        <img id="doe-sketch-image" class="doe-preview-poster doe-sketch-image" alt="">
+      </div>
+    </dialog>
+    <dialog id="doe-hologram-preview" class="doe-hologram-preview" aria-label="DOE assembly hologram">
+      <img id="doe-hologram-panel" class="doe-hologram-panel" src="assets/doe-hologram/panel.png" width="1448" height="1086" alt="">
+      <div id="doe-hologram-activation" class="doe-hologram-activation" aria-hidden="true" hidden></div>
+      <button id="doe-hologram-close" class="doe-hologram-close" type="button" aria-label="Close hologram"></button>
+      <section class="doe-carousel" aria-label="DOE design references" aria-roledescription="carousel">
+        <div class="doe-carousel-cards">
+          <button type="button" data-offset="0" aria-current="true" aria-label="Red armor reference">
+            <img src="assets/doe-hologram/references/AdobeStock_435516559.jpeg" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="1" aria-label="Stag reference">
+            <img src="assets/doe-hologram/references/AdobeStock_1909610515.png" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="2" aria-label="Yellow robot reference">
+            <img src="assets/doe-hologram/references/AdobeStock_335638182.jpeg" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="-2" aria-label="DOE logo" data-original="assets/doe-hologram/references/doe-logo.pdf">
+            <img src="assets/doe-hologram/references/doe-logo-preview.png" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="-1" aria-label="DOE moodboard" data-original="assets/doe-hologram/references/doe-moodboard.pdf">
+            <img src="assets/doe-hologram/references/doe-moodboard-preview.png" alt="" decoding="async" draggable="false">
+          </button>
+        </div>
+        <div class="doe-carousel-controls">
+          <button class="doe-carousel-prev" type="button" aria-label="Previous reference">‹</button>
+          <span class="doe-carousel-position" aria-hidden="true">1 / 5</span>
+          <span class="doe-carousel-status sr-only" role="status">Red armor reference, 1 of 5</span>
+          <button class="doe-carousel-next" type="button" aria-label="Next reference">›</button>
+          <a class="doe-carousel-original" href="assets/doe-hologram/references/AdobeStock_435516559.jpeg" target="_blank" rel="noopener">Open original</a>
+        </div>
+      </section>
+    </dialog>
+    <dialog id="airpod-book" class="project-book" aria-label="AirPod Prototype project book">
+      <button type="button" class="book-close" aria-label="Close project book">Close</button>
+      <div class="book-sparkles" aria-hidden="true"></div>
+      <button type="button" class="book-cover" aria-label="Open the AirPod Case Prototype Project book">
+        <img src="assets/airpod-book/cover.png" width="1199" height="1312" alt="">
+      </button>
+      <div class="book-reader" hidden>
+        <div class="book-spread">
+          <img class="book-page" alt="">
+          <div class="book-leaf" aria-hidden="true" hidden>
+            <div class="book-leaf-front"><img alt=""></div>
+            <div class="book-leaf-back"><img alt=""></div>
+          </div>
+          <button type="button" class="book-edge book-previous" aria-label="Previous page">‹</button>
+          <button type="button" class="book-edge book-next" aria-label="Next page">›</button>
+        </div>
+        <div class="book-caption">
+          <span class="book-status" aria-live="polite"></span>
+          <a class="book-full-page" target="_blank" rel="noopener">View full size</a>
+        </div>
+      </div>
+    </dialog>
+  </body>
+</html>
