@@ -31,6 +31,7 @@
       <canvas id="room" width="790" height="510" tabindex="0" role="application" aria-describedby="controls" aria-label="A pixel-art museum room in warm afternoon sunlight. Six ornate gold frames display Whack-a-Mole, Puma Dunk, Drizzle App, HTML CSS Project, a moonlit dragon and castle, and a DOE antlered warrior above a wooden bench, with an AirPod Prototype on a marble pedestal on the left and a classical marble bust on the right.">A sunlit gallery with six framed pixel artworks, a playable character, a wooden bench, an AirPod Prototype, and a marble bust.</canvas>
       <button id="doe-portal" class="artwork-portal" type="button" aria-label="View the DOE poster" aria-haspopup="dialog"></button>
       <button id="doe-plaque-portal" class="artwork-portal" type="button" aria-label="DOE plaque: view the DOE poster" aria-haspopup="dialog"></button>
+      <button id="moonlit-portal" class="artwork-portal" type="button" aria-label="View Moonlit Dragon and Castle" aria-haspopup="dialog" hidden></button>
       <button id="airpod-exhibit" class="artwork-portal" type="button" aria-label="Visit the AirPod Prototype and read its project book"></button>
       <button id="back-to-museum" class="back-button" type="button" hidden>Back to museum</button>
       <button id="doe-concept-board" class="doe-concept-board" type="button" aria-label="Walk to the DOE concept sketches" aria-haspopup="dialog" hidden>
@@ -38,7 +39,7 @@
       </button>
       <button id="doe-hologram" class="doe-hologram" type="button" aria-label="Walk to the DOE assembly hologram" aria-haspopup="dialog" hidden></button>
       <p id="scene-status" class="scene-status" role="status" hidden></p>
-      <p id="controls" class="sr-only">Click or tap the floor to walk. You can also use the arrow keys or W, A, S, and D. Select the DOE frame to view its poster or the AirPod Prototype to read its project book. Use Back to museum or Escape to return.</p>
+      <p id="controls" class="sr-only">Click or tap the floor to walk. You can also use the arrow keys or W, A, S, and D. Select the DOE or Moonlit Dragon frame to view the artwork, or the AirPod Prototype to read its project book. Use Back to museum or Escape to return.</p>
     </main>
     <div id="doe-smoke" class="doe-smoke" aria-hidden="true" hidden>
     </div>
@@ -50,6 +51,19 @@
       <button id="doe-enter-world" class="doe-enter-world" type="button" aria-label="Enter DOE world">
         <img src="assets/doe-preview/enter-world.png" width="2172" height="724" alt="">
       </button>
+    </dialog>
+    <dialog id="moonlit-preview" class="doe-preview moonlit-preview" aria-label="Moonlit Dragon and Castle preview">
+      <button id="moonlit-preview-close" class="doe-preview-close" type="button" aria-label="Close Moonlit Dragon and Castle preview" autofocus><span aria-hidden="true"></span></button>
+      <div id="moonlit-artwork-hover" class="doe-poster-hover">
+        <img class="doe-preview-poster" src="assets/moonlit/artwork.png" width="1920" height="1080" alt="A dragon and a sword overlook a castle in the clouds beneath a full moon.">
+      </div>
+      <button id="moonlit-enter-world" class="doe-enter-world" type="button" aria-label="Enter Moonlit Castle world" aria-haspopup="dialog">
+        <img src="assets/moonlit/enter-world.png" width="2172" height="724" alt="">
+      </button>
+    </dialog>
+    <dialog id="moonlit-world" class="moonlit-world" aria-label="Moonlit Castle balcony">
+      <img src="assets/moonlit/balcony.png" width="1672" height="941" alt="A torchlit stone balcony looks out on a starry sky and cloud-covered mountains.">
+      <button id="moonlit-world-back" class="back-button" type="button" autofocus>Back to museum</button>
     </dialog>
     <dialog id="doe-board-preview" class="doe-board-preview" aria-label="DOE concept sketches">
       <button id="doe-board-close" class="doe-preview-close" type="button" aria-label="Close concept board" autofocus><span aria-hidden="true"></span></button>

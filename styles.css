@@ -282,6 +282,33 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
 .doe-enter-world:hover { filter: brightness(1.2); }
 .doe-preview button:focus-visible { outline: 2px solid #ceff7a; outline-offset: 2px; }
 
+.moonlit-preview {
+  --moonlit-button-width: clamp(120px, 34dvh, 300px);
+  width: min(calc(100vw - 32px), 1050px, calc((100dvh - 58px - var(--moonlit-button-width) / 3) * 16 / 9));
+}
+.moonlit-preview::backdrop { background: #080f1ae0; }
+.moonlit-preview .doe-enter-world { width: min(100%, var(--moonlit-button-width)); }
+.moonlit-preview button:focus-visible { outline-color: #7ddbff; }
+.moonlit-world {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #071228;
+}
+.moonlit-world img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+}
+
 .doe-smoke {
   position: fixed;
   inset: 0;

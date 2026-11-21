@@ -224,11 +224,19 @@ function moveTo(destination, onArrival = null) {
 }
 
 function approachDoeExhibit() {
-  if (activeScene !== 'museum' || openingDoe || doePreview.open || exhibitWalk?.onArrival === showDoePreview) return;
-  const frame = scene.frames.find(frame => frame.index === 5);
+  approachMuseumFrame(5, doePreview, showDoePreview);
+}
+
+function approachMoonlitExhibit() {
+  approachMuseumFrame(MOONLIT_FRAME_INDEX, moonlitPreview, showMoonlitPreview);
+}
+
+function approachMuseumFrame(index, preview, onArrival) {
+  if (activeScene !== 'museum' || openingDoe || preview.open || exhibitWalk?.onArrival === onArrival) return;
+  const frame = scene.frames.find(frame => frame.index === index);
   if (!frame) return;
   canvas.focus({ preventScroll: true });
-  moveTo({ x: frame.x + frame.width / 2, y: floorTop() + 8 }, showDoePreview);
+  moveTo({ x: frame.x + frame.width / 2, y: floorTop() + 8 }, onArrival);
 }
 
 function pointerPosition(event) {
@@ -303,6 +311,10 @@ const doePreview = document.querySelector('#doe-preview');
 const doePosterHover = document.querySelector('#doe-poster-hover');
 const doePreviewClose = document.querySelector('#doe-preview-close');
 const doeEnterWorld = document.querySelector('#doe-enter-world');
+const MOONLIT_FRAME_INDEX = 4;
+const moonlitPortal = document.querySelector('#moonlit-portal');
+const moonlitPreview = document.querySelector('#moonlit-preview');
+const moonlitWorld = document.querySelector('#moonlit-world');
 const doeConceptBoard = document.querySelector('#doe-concept-board');
 const doeHologram = document.querySelector('#doe-hologram');
 const doeHologramPreview = document.querySelector('#doe-hologram-preview');
@@ -393,25 +405,25 @@ function updateSceneControls() {
   }
   doePortal.hidden = activeScene !== 'museum';
   doePlaquePortal.hidden = activeScene !== 'museum';
+  moonlitPortal.hidden = activeScene !== 'museum';
   if (activeScene === 'museum') {
-    const frame = scene.frames.find(frame => frame.index === 5);
-    if (frame) Object.assign(doePortal.style, {
-      left: `${(frame.x - scene.left) / canvas.width * 100}%`,
-      top: `${(frame.y - scene.top) / canvas.height * 100}%`,
-      width: `${frame.width / canvas.width * 100}%`,
-      height: `${frame.height / canvas.height * 100}%`,
-    });
-    const plaque = scene.plaques.find(plaque => plaque.index === 5);
-    if (plaque) Object.assign(doePlaquePortal.style, {
-      left: `${(plaque.x - scene.left) / canvas.width * 100}%`,
-      top: `${(plaque.y - scene.top) / canvas.height * 100}%`,
-      width: `${plaque.width / canvas.width * 100}%`,
-      height: `${plaque.height / canvas.height * 100}%`,
-    });
+    positionGalleryPortal(doePortal, scene.frames.find(frame => frame.index === 5));
+    positionGalleryPortal(doePlaquePortal, scene.plaques.find(plaque => plaque.index === 5));
+    positionGalleryPortal(moonlitPortal, scene.frames.find(frame => frame.index === MOONLIT_FRAME_INDEX));
   }
   canvas.setAttribute('aria-label', activeScene === 'doe'
     ? 'DOE design workshop. An antlered armored character explores a workshop with a concept desk, green assembly hologram, and final DOE display. Click or tap the tiled floor to walk.'
     : museumDescription);
+}
+
+function positionGalleryPortal(portal, artwork) {
+  if (!artwork) return;
+  Object.assign(portal.style, {
+    left: `${(artwork.x - scene.left) / canvas.width * 100}%`,
+    top: `${(artwork.y - scene.top) / canvas.height * 100}%`,
+    width: `${artwork.width / canvas.width * 100}%`,
+    height: `${artwork.height / canvas.height * 100}%`,
+  });
 }
 
 async function openDoeWorld() {
@@ -495,6 +507,23 @@ function bindArtworkTilt(surface, dialog) {
 }
 
 bindArtworkTilt(doePosterHover, doePreview);
+function showMoonlitPreview() {
+  if (activeScene === 'museum' && !moonlitPreview.open && !openingDoe) moonlitPreview.showModal();
+}
+
+bindArtworkTilt(document.querySelector('#moonlit-artwork-hover'), moonlitPreview);
+moonlitPortal.addEventListener('click', approachMoonlitExhibit);
+document.querySelector('#moonlit-preview-close').addEventListener('click', () => moonlitPreview.close());
+moonlitPreview.addEventListener('close', () => {
+  if (!moonlitWorld.open) moonlitPortal.focus({ preventScroll: true });
+});
+document.querySelector('#moonlit-enter-world').addEventListener('click', () => {
+  moonlitPreview.close();
+  moonlitWorld.showModal();
+});
+document.querySelector('#moonlit-world-back').addEventListener('click', () => moonlitWorld.close());
+moonlitWorld.addEventListener('close', () => moonlitPortal.focus({ preventScroll: true }));
+
 doePreviewClose.addEventListener('click', () => doePreview.close());
 doeEnterWorld.addEventListener('click', () => {
   doePreview.close();
