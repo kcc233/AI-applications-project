@@ -1,19 +1,29 @@
 {
   const world = document.querySelector('#moonlit-world');
   const balcony = world.querySelector('.moonlit-balcony');
+  const easel = balcony.querySelector('.moonlit-easel');
+  const scraps = balcony.querySelector('.moonlit-scraps');
+  const parchmentPhotos = document.querySelector('#moonlit-photo-preview');
+  const referenceAssets = document.querySelector('#moonlit-assets-preview');
   const balconyArt = balcony.querySelector('img');
   const extension = world.querySelector('#moonlit-floor');
   const layer = world.querySelector('#moonlit-knight');
   const painter = layer.getContext('2d');
   const floor = { left: 221, right: 1451, top: 868, bottom: layer.height - 22 };
   const moveSpeed = 300; // Castle scene units per second.
-  const spriteHeight = 134;
+  const spriteHeight = 180;
   const spawnY = 1055;
-  const edgeMargin = 38;
+  const edgeMargin = 48;
+  const propClearance = 32;
+  const props = [
+    { element: balcony.querySelector('.moonlit-sketchbook'), base: [.31, .65, .897], approach: .48 },
+    { element: easel, base: [.25, .80, 1], approach: .42 },
+  ];
   const knight = { x: 836, y: spawnY, facing: 1, back: false, walkTime: 0 };
   let limits = floor;
-  let spriteAspectCorrection = 1;
+  let obstacles = [];
   let destination = null;
+  let approachingPainting = false;
   let animation = 0;
   let lastTime = 0;
   let needsSpawn = true;
@@ -52,6 +62,29 @@
     shade.addColorStop(1, '#040e2860');
     ground.fillStyle = shade;
     ground.fillRect(0, 0, width, height);
+    paintBalconyEdges();
+  }
+
+  function paintBalconyEdges() {
+    // Reflect only the outer stone, beyond the torches, at its original scale.
+    const stripWidth = 48;
+    const tile = document.createElement('canvas');
+    tile.width = stripWidth * 2;
+    tile.height = layer.height;
+    const edge = tile.getContext('2d');
+    for (const side of ['left', 'right']) {
+      const sourceX = side === 'left' ? 0 : layer.width - stripWidth;
+      const originalX = side === 'left' ? 0 : stripWidth;
+      for (const [art, height, y] of [[balconyArt, balconyArt.naturalHeight, 0], [extension, extension.height, balconyArt.naturalHeight]]) {
+        edge.drawImage(art, sourceX, 0, stripWidth, height, originalX, y, stripWidth, height);
+        edge.save();
+        edge.translate(stripWidth * 2, 0);
+        edge.scale(-1, 1);
+        edge.drawImage(art, sourceX, 0, stripWidth, height, originalX, y, stripWidth, height);
+        edge.restore();
+      }
+      balcony.style.setProperty(`--balcony-${side}-edge`, `url("${tile.toDataURL()}")`);
+    }
   }
 
   if (balconyArt.naturalWidth) paintFloorExtension();
@@ -73,14 +106,13 @@
       ? [205, 110, 614, knight.back ? 1352 : 1349]
       : [Math.round((phase + .5) * cellWidth) - 98, knight.back ? 456 : 12, 196, 412];
     const drawWidth = Math.round(spriteHeight * width / height);
-    const drawHeight = Math.round(spriteHeight * spriteAspectCorrection);
     const bob = destination && phase % 2 && !reducedMotion.matches ? -1 : 0;
     painter.save();
     painter.translate(Math.round(knight.x), Math.round(knight.y));
     painter.fillStyle = '#050c228c';
-    painter.fillRect(-16, -2, 32, 5);
+    painter.fillRect(-21, -2, 42, 5);
     painter.scale(knight.facing, 1);
-    painter.drawImage(sprite, x, y, width, height, -Math.round(drawWidth / 2), -drawHeight + bob, drawWidth, drawHeight);
+    painter.drawImage(sprite, x, y, width, height, -Math.round(drawWidth / 2), -spriteHeight + bob, drawWidth, spriteHeight);
     painter.restore();
   }
 
@@ -90,15 +122,31 @@
     const view = world.getBoundingClientRect();
     if (!sceneRect.width || !view.width) return;
     const scale = layer.width / sceneRect.width;
-    spriteAspectCorrection = layer.height / (sceneRect.height * scale);
     limits = {
       ...floor,
       left: Math.max(floor.left, (view.left - sceneRect.left) * scale + edgeMargin),
       right: Math.min(floor.right, (view.right - sceneRect.left) * scale - edgeMargin),
     };
+    obstacles = props.map(({ element, base: [left, right, bottom], approach }) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        element,
+        left: (rect.left + rect.width * left - sceneRect.left) * scale - propClearance,
+        right: (rect.left + rect.width * right - sceneRect.left) * scale + propClearance,
+        top: floor.top - 1,
+        bottom: (rect.top + rect.height * bottom - sceneRect.top) * scale + 12,
+        approachX: (rect.left + rect.width * approach - sceneRect.left) * scale,
+      };
+    });
     knight.x = needsSpawn ? (limits.left + limits.right) / 2 : clamp(knight.x, limits.left, limits.right);
     needsSpawn = false;
-    if (destination) destination.x = clamp(destination.x, limits.left, limits.right);
+    for (const obstacle of obstacles) {
+      if (knight.x > obstacle.left && knight.x < obstacle.right && knight.y < obstacle.bottom) {
+        knight.y = obstacle.bottom;
+      }
+    }
+    if (approachingPainting) continuePaintingApproach();
+    else if (destination) walkTo(destination.x, destination.y);
     paintKnight();
   }
 
@@ -111,7 +159,7 @@
     const remaining = Math.hypot(dx, dy);
     const step = elapsed * moveSpeed;
     if (Math.abs(dx) > .1) knight.facing = dx < 0 ? -1 : 1;
-    knight.back = dy < -Math.abs(dx) * .6;
+    if (remaining > 0) knight.back = dy < -Math.abs(dx) * .6;
     if (remaining <= step) {
       Object.assign(knight, destination, { walkTime: 0 });
       destination = null;
@@ -123,21 +171,90 @@
       animation = requestAnimationFrame(animateKnight);
     }
     paintKnight();
+    if (!destination && approachingPainting) continuePaintingApproach();
+  }
+
+  function obstacleEntry(target, obstacle) {
+    let entry = 0;
+    let exit = 1;
+    for (const [axis, low, high] of [['x', obstacle.left, obstacle.right], ['y', obstacle.top, obstacle.bottom]]) {
+      const start = knight[axis];
+      const delta = target[axis] - start;
+      if (delta === 0) {
+        if (start <= low || start >= high) return 1;
+        continue;
+      }
+      const first = (low - start) / delta;
+      const second = (high - start) / delta;
+      entry = Math.max(entry, Math.min(first, second));
+      exit = Math.min(exit, Math.max(first, second));
+    }
+    return entry < exit ? entry : 1;
   }
 
   function walkTo(x, y) {
     const target = { x: clamp(x, limits.left, limits.right), y: clamp(y, floor.top, floor.bottom) };
+    const entry = Math.min(1, ...obstacles.map(obstacle => obstacleEntry(target, obstacle)));
+    if (entry < 1) {
+      // Leave a tiny gap so the next move can slide along the edge.
+      const distance = Math.hypot(target.x - knight.x, target.y - knight.y);
+      const fraction = Math.max(0, entry - .05 / distance);
+      target.x = knight.x + (target.x - knight.x) * fraction;
+      target.y = knight.y + (target.y - knight.y) * fraction;
+    }
     if (target.x === knight.x && target.y === knight.y && !destination) return;
     destination = target;
     if (!animation) animation = requestAnimationFrame(animateKnight);
   }
 
+  function continuePaintingApproach() {
+    const stand = obstacles.find(obstacle => obstacle.element === easel);
+    const x = clamp(stand.approachX, limits.left, limits.right);
+    if (knight.y < stand.bottom) {
+      walkTo(knight.x, stand.bottom);
+    } else if (knight.x !== x || knight.y !== stand.bottom) {
+      walkTo(x, stand.bottom);
+    } else {
+      stopKnight();
+      knight.back = true;
+      paintKnight();
+      if (world.open && !parchmentPhotos.open) parchmentPhotos.showModal();
+    }
+  }
+
+  easel.addEventListener('click', () => {
+    if (!obstacles.length) updateVisibleFloor();
+    approachingPainting = true;
+    continuePaintingApproach();
+  });
+  parchmentPhotos.querySelector('.doe-preview-close').addEventListener('click', () => parchmentPhotos.close());
+  parchmentPhotos.addEventListener('close', () => easel.focus({ preventScroll: true }));
+
+  scraps.addEventListener('pointerdown', event => event.stopPropagation());
+  scraps.addEventListener('click', () => {
+    stopKnight();
+    paintKnight();
+    referenceAssets.showModal();
+  });
+  referenceAssets.querySelector('.doe-preview-close').addEventListener('click', () => referenceAssets.close());
+  referenceAssets.addEventListener('close', () => scraps.focus({ preventScroll: true }));
+
   balcony.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
+    const clickedProp = event.target.closest('.moonlit-prop');
+    if (clickedProp === easel) return;
+    const prop = obstacles.find(obstacle => obstacle.element === clickedProp);
+    if (prop) {
+      approachingPainting = false;
+      balcony.focus({ preventScroll: true });
+      walkTo(prop.approachX, prop.bottom);
+      return;
+    }
     const rect = balcony.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width * layer.width;
     const y = (event.clientY - rect.top) / rect.height * layer.height;
     if (x < floor.left || x > floor.right || y < floor.top) return;
+    approachingPainting = false;
     balcony.focus({ preventScroll: true });
     walkTo(x, y);
   });
@@ -145,18 +262,25 @@
   world.addEventListener('keydown', event => {
     const direction = movementDirection(event.key);
     if (!direction) return;
+    approachingPainting = false;
     event.preventDefault();
     const from = destination ?? knight;
     walkTo(from.x + direction[0] * 28, from.y + direction[1] * 28);
   });
 
-  world.addEventListener('close', () => {
+  function stopKnight() {
     cancelAnimationFrame(animation);
     animation = 0;
     lastTime = 0;
     destination = null;
+    approachingPainting = false;
+    knight.walkTime = 0;
+  }
+
+  world.addEventListener('close', () => {
+    stopKnight();
     needsSpawn = true;
-    Object.assign(knight, { y: spawnY, facing: 1, back: false, walkTime: 0 });
+    Object.assign(knight, { y: spawnY, facing: 1, back: false });
   });
 
   new ResizeObserver(updateVisibleFloor).observe(world);

@@ -303,17 +303,40 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   background: #071228;
 }
 .moonlit-balcony {
-  --balcony-width: max(100vw, calc(100dvh * 1672 / 1197));
+  --balcony-width: clamp(calc(100dvh * 1672 / 1197), 100vw, calc(116dvh * 1672 / 1197));
+  --edge-width: max(0px, calc((100vw - var(--balcony-width)) / 2));
+  --edge-tile-width: calc(var(--balcony-width) * 96 / 1672);
   position: absolute;
   left: 50%;
   bottom: 0;
   width: var(--balcony-width);
-  height: min(calc(var(--balcony-width) * 1197 / 1672), 116dvh);
+  aspect-ratio: 1672 / 1197;
   transform: translateX(-50%);
+}
+.moonlit-balcony::before,
+.moonlit-balcony::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: var(--edge-width);
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.moonlit-balcony::before {
+  right: 100%;
+  background: linear-gradient(to left, transparent, #050d22b3),
+    var(--balcony-left-edge, none) right bottom / var(--edge-tile-width) 100% repeat-x;
+}
+.moonlit-balcony::after {
+  left: 100%;
+  background: linear-gradient(to right, transparent, #050d22b3),
+    var(--balcony-right-edge, none) left bottom / var(--edge-tile-width) 100% repeat-x;
 }
 @media (max-aspect-ratio: 1/1) {
   .moonlit-balcony {
-    left: clamp(calc(100% - var(--balcony-width)), calc(50% - var(--balcony-width) * .726), 0px);
+    --balcony-left: clamp(calc(100vw - var(--balcony-width)), calc(50vw - var(--balcony-width) * .726), 0px);
+    left: var(--balcony-left);
     transform: none;
   }
 }
@@ -325,18 +348,129 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   display: block;
   width: 100%;
   height: 100%;
+  image-rendering: pixelated;
 }
 #moonlit-floor {
   height: calc(100% * 256 / 1197);
 }
 .moonlit-carpet {
   position: absolute;
-  top: 53.4%;
+  bottom: -3.25%;
   left: 0;
   width: 100%;
-  height: 50%;
+  height: auto;
   image-rendering: pixelated;
   pointer-events: none;
+}
+.moonlit-scraps {
+  position: absolute;
+  top: 74.5%;
+  left: 48%;
+  width: 16%;
+  height: 9%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.moonlit-scraps:focus-visible { outline: 2px solid #ffdaa1; outline-offset: 4px; }
+.moonlit-scraps span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: calc(var(--size) * 1.25);
+  aspect-ratio: 512 / 200;
+  background: url("assets/moonlit/parchment-scraps.png") var(--column, 0%) var(--row, 31.19%) / 300% 512% no-repeat;
+  image-rendering: pixelated;
+  transform: translate(-50%, -50%) rotate(var(--angle));
+  filter: drop-shadow(0 0 4px #ffd89b70);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.moonlit-scraps span:nth-child(1) { --x: 4%; --y: 10%; --size: 24%; --angle: -12deg; --delay: 0s; }
+.moonlit-scraps span:nth-child(2) { --column: 50%; --x: 34%; --y: 26%; --size: 21%; --angle: 8deg; --delay: -.8s; }
+.moonlit-scraps span:nth-child(3) { --column: 100%; --x: 66%; --y: 6%; --size: 22%; --angle: -6deg; --delay: -1.8s; }
+.moonlit-scraps span:nth-child(n+4) { --row: 78.88%; }
+.moonlit-scraps span:nth-child(4) { --x: 15%; --y: 66%; --size: 26%; --angle: 11deg; --delay: -1.3s; }
+.moonlit-scraps span:nth-child(5) { --column: 50%; --x: 50%; --y: 62%; --size: 23%; --angle: -10deg; --delay: -.4s; }
+.moonlit-scraps span:nth-child(6) { --column: 100%; --x: 83%; --y: 85%; --size: 25%; --angle: 15deg; --delay: -2.2s; }
+
+@media (max-aspect-ratio: 1/1) {
+  .moonlit-scraps {
+    top: 78%;
+    left: calc(45vw - var(--balcony-left));
+    width: 51vw;
+    height: 10%;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .moonlit-world[open] .moonlit-scraps span {
+    animation: moonlit-parchment-glow 2.8s ease-in-out var(--delay) infinite;
+  }
+}
+@keyframes moonlit-parchment-glow {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 2px #ffd89b50); }
+  50% { filter: brightness(1.24) drop-shadow(0 0 7px #ffd89bd0); }
+}
+.moonlit-prop {
+  position: absolute;
+  background: var(--prop-art) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.moonlit-prop::before,
+.moonlit-prop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.moonlit-prop::before {
+  clip-path: var(--prop-silhouette);
+  pointer-events: auto;
+}
+.moonlit-prop::after {
+  clip-path: var(--prop-highlight);
+  background: radial-gradient(ellipse at var(--glow-center), var(--glow-color), transparent 41%),
+    var(--prop-art) center / 100% 100% no-repeat;
+  filter: brightness(1.28);
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+.moonlit-prop:is(:hover, :focus-visible)::after { opacity: 1; }
+.moonlit-sketchbook {
+  --prop-art: url("assets/moonlit/sketchbook-lectern.png");
+  --prop-silhouette: polygon(32% 12%, 43% 10%, 78% 13%, 79% 19%, 68% 42%, 60% 47%, 58% 73%, 64% 82%, 65% 86%, 59% 90%, 31% 90%, 31% 83%, 39% 78%, 40% 49%, 33% 42%, 21% 40%, 21% 36%);
+  --prop-highlight: polygon(37% 15%, 46% 14.7%, 53% 17%, 59% 15.4%, 68% 16.3%, 71% 17.4%, 68% 24%, 64% 35.5%, 53% 35.4%, 46% 36.3%, 42% 34.7%, 28% 34.5%, 30% 28%);
+  --glow-center: 50% 25%;
+  --glow-color: #ffd68742;
+  left: 24.3%;
+  top: 76%;
+  width: 12.1%;
+  aspect-ratio: 1216 / 1293;
+  transform: translate(-50%, -89.7%);
+}
+.moonlit-easel {
+  --prop-art: url("assets/moonlit/dragon-easel.png");
+  --prop-silhouette: polygon(20% 15%, 35% 15%, 35% 11%, 40% 10%, 40% 0%, 44% 0%, 45% 10%, 49% 11%, 50% 15%, 65% 15%, 65% 61%, 56% 64%, 58% 99%, 25% 99%, 29% 65%, 27% 64%, 27% 62%, 20% 62%);
+  --prop-highlight: inset(18.2% 36.8% 40.8% 21.4%);
+  --glow-center: 43% 36%;
+  --glow-color: #66d9ff40;
+  left: 36.5%;
+  top: 77.4%;
+  width: 24.2%;
+  aspect-ratio: 1670 / 941;
+  padding: 0;
+  border: 0;
+  transform: translate(-42.2%, -100%);
+}
+.moonlit-easel::before { cursor: pointer; }
+.moonlit-easel:focus-visible { outline: 2px solid #ffdaa1; outline-offset: -2px; }
+@media (max-aspect-ratio: 1/1) {
+  .moonlit-sketchbook { left: calc(25vw - var(--balcony-left)); }
+  .moonlit-easel { left: calc(61vw - var(--balcony-left)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .moonlit-prop::after { transition: none; }
 }
 #moonlit-knight {
   position: absolute;
@@ -355,7 +489,6 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   --sprite-sheet: url("assets/moonlit/torch-flames.png");
   top: 53.35%;
   width: 8.8%;
-  height: 15.64%;
   transform: translate(-50%, -81.4%);
 }
 .moonlit-flame-left { left: 5.08%; }
@@ -365,7 +498,6 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   top: 33.5%;
   left: 72.6%;
   width: 13%;
-  height: 23.1%;
   transform: translate(-50%, -50%);
 }
 
@@ -715,3 +847,55 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   .doe-carousel-cards :is(button, img),
   .doe-carousel-cards button::after { transition: none; }
 }
+
+.moonlit-photo-preview {
+  --assets-sign-width: min(260px, 52vw, 28dvh);
+  --carousel-ratio: 2.15;
+  width: min(1080px, calc(100vw - 28px), calc((100dvh - 108px - var(--assets-sign-width) * 779 / 2020) * var(--carousel-ratio)));
+  color: #ffdfa7;
+}
+.moonlit-photo-preview::backdrop { background: #050a1bd9; }
+.moonlit-photo-preview .doe-carousel {
+  position: static;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  padding: 0;
+  color: inherit;
+}
+.moonlit-photo-preview .doe-carousel-cards { aspect-ratio: var(--carousel-ratio); }
+.moonlit-photo-preview .doe-carousel-cards button {
+  inset-inline: 17%;
+  border-color: #79a7de60;
+  background: #121c34;
+}
+.moonlit-photo-preview .doe-carousel-cards [data-offset="-1"] { --shift: -37%; }
+.moonlit-photo-preview .doe-carousel-cards [data-offset="1"] { --shift: 37%; }
+.moonlit-photo-preview .doe-carousel-cards [data-offset="0"] {
+  border-color: #f5d295;
+  box-shadow: 0 0 16px #77b4ff42, 0 5px 16px #0009;
+}
+.moonlit-photo-preview .doe-carousel-cards button:not([data-offset="0"]) img {
+  filter: grayscale(.6) sepia(.45) hue-rotate(177deg) brightness(.63);
+}
+.moonlit-photo-preview .doe-carousel-cards button::after { display: none; }
+.moonlit-photo-preview .doe-carousel-controls :is(button, a) {
+  min-height: 36px;
+  border-color: #81a7dc85;
+  background: #14233c;
+}
+.moonlit-photo-preview .doe-carousel-controls :is(button, a):hover { background: #24395c; }
+.moonlit-photo-preview :is(button, a):focus-visible { outline-color: #ffdfa7; }
+
+.moonlit-assets-preview { --carousel-ratio: 2.3; }
+.moonlit-assets-sign {
+  display: block;
+  width: var(--assets-sign-width);
+  height: auto;
+  margin: 0 auto 8px;
+  image-rendering: pixelated;
+}
+.moonlit-assets-preview .doe-carousel-cards button { inset-inline: 20%; }
+.moonlit-assets-preview .doe-carousel-cards img { background: #fff; }
+.moonlit-assets-preview .doe-carousel-cards [data-offset="-2"] { --shift: -50%; }
+.moonlit-assets-preview .doe-carousel-cards [data-offset="2"] { --shift: 50%; }
+.moonlit-assets-preview .doe-carousel-cards [data-offset="-3"] { visibility: hidden; }

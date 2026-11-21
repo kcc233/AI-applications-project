@@ -1,5 +1,4 @@
-{
-  const dialog = document.querySelector('#doe-hologram-preview');
+function bindArtworkCarousel(dialog) {
   const carousel = dialog.querySelector('.doe-carousel');
   const stack = carousel.querySelector('.doe-carousel-cards');
   const cards = Array.from(stack.querySelectorAll('button'));
@@ -76,3 +75,5 @@
   dialog.addEventListener('close', () => select(0));
   select(0);
 }
+
+document.querySelectorAll('dialog[data-carousel]').forEach(bindArtworkCarousel);

@@ -72,10 +72,73 @@
         </div>
         <canvas id="moonlit-floor" width="1672" height="256" aria-hidden="true"></canvas>
         <img class="moonlit-carpet" src="assets/moonlit/balcony-carpet.png" width="2172" height="724" alt="">
+        <button class="moonlit-scraps" type="button" aria-label="View the castle reference assets" aria-haspopup="dialog">
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+        </button>
+        <div class="moonlit-prop moonlit-sketchbook" role="img" aria-label="Open castle sketchbook on a stone lectern"></div>
+        <button class="moonlit-prop moonlit-easel" type="button" aria-label="Walk to the painting stand and view the parchment photos" aria-haspopup="dialog"></button>
         <canvas id="moonlit-knight" width="1672" height="1197" aria-hidden="true"></canvas>
       </div>
-      <p id="moonlit-controls" class="sr-only">Click or tap the balcony floor or use the arrow keys or W, A, S, and D to move the knight. Press Escape to return to the museum.</p>
+      <p id="moonlit-controls" class="sr-only">Click or tap the balcony floor or use the arrow keys or W, A, S, and D to move the knight. Select the painting stand to view the parchment photos, or select the scattered papers to view the reference assets. Press Escape to return to the museum.</p>
       <button id="moonlit-world-back" class="back-button" type="button">Back to museum</button>
+    </dialog>
+    <dialog id="moonlit-photo-preview" class="doe-preview moonlit-photo-preview" aria-label="Castle parchment photos" data-carousel>
+      <button class="doe-preview-close" type="button" aria-label="Close parchment photos" autofocus><span aria-hidden="true"></span></button>
+      <img class="moonlit-assets-sign" src="assets/moonlit/references/early-iterations-sign.png" width="2172" height="724" alt="Early Iterations">
+      <section class="doe-carousel" aria-label="Parchment photos" aria-roledescription="carousel">
+        <div class="doe-carousel-cards">
+          <button type="button" data-offset="0" aria-current="true" aria-label="Moon and clouds">
+            <img src="assets/moonlit/references/moon-and-clouds-on-parchment.png" width="2220" height="1560" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="1" aria-label="Fantasy landscape">
+            <img src="assets/moonlit/references/fantasy-landscape-on-parchment.png" width="2220" height="1560" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="-1" aria-label="Mountain cliffs">
+            <img src="assets/moonlit/references/mountain-cliffs-on-parchment.png" width="2220" height="1560" alt="" decoding="async" draggable="false">
+          </button>
+        </div>
+        <div class="doe-carousel-controls">
+          <button class="doe-carousel-prev" type="button" aria-label="Previous photo">‹</button>
+          <span class="doe-carousel-position" aria-hidden="true">1 / 3</span>
+          <span class="doe-carousel-status sr-only" role="status">Moon and clouds, 1 of 3</span>
+          <button class="doe-carousel-next" type="button" aria-label="Next photo">›</button>
+          <a class="doe-carousel-original" href="assets/moonlit/references/moon-and-clouds-on-parchment.png" target="_blank" rel="noopener">Open original</a>
+        </div>
+      </section>
+    </dialog>
+    <dialog id="moonlit-assets-preview" class="doe-preview moonlit-photo-preview moonlit-assets-preview" aria-label="Castle reference assets" data-carousel>
+      <button class="doe-preview-close" type="button" aria-label="Close reference assets" autofocus><span aria-hidden="true"></span></button>
+      <img class="moonlit-assets-sign" src="assets/moonlit/reference-assets/assets-sign.png" width="2020" height="779" alt="Assets">
+      <section class="doe-carousel" aria-label="Castle reference images" aria-roledescription="carousel">
+        <div class="doe-carousel-cards">
+          <button type="button" data-offset="0" aria-current="true" aria-label="Forest cliffs">
+            <img src="assets/moonlit/reference-assets/forest-cliff.jpeg" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="1" aria-label="Floating island" data-original="assets/moonlit/reference-assets/floating-island.jpeg">
+            <img src="assets/moonlit/reference-assets/preview-floating-island.jpeg" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="2" aria-label="Rocky ledge" data-original="assets/moonlit/reference-assets/rocky-ledge.jpeg">
+            <img src="assets/moonlit/reference-assets/preview-rocky-ledge.jpeg" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="-3" aria-label="Misty peak" data-original="assets/moonlit/reference-assets/misty-peak.png">
+            <img src="assets/moonlit/reference-assets/preview-misty-peak.png" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="-2" aria-label="Twin peaks" data-original="assets/moonlit/reference-assets/twin-peaks.png">
+            <img src="assets/moonlit/reference-assets/preview-twin-peaks.png" alt="" decoding="async" draggable="false">
+          </button>
+          <button type="button" data-offset="-1" aria-label="Mountain range" data-original="assets/moonlit/reference-assets/mountain-range.png">
+            <img src="assets/moonlit/reference-assets/preview-mountain-range.png" alt="" decoding="async" draggable="false">
+          </button>
+        </div>
+        <div class="doe-carousel-controls">
+          <button class="doe-carousel-prev" type="button" aria-label="Previous reference">‹</button>
+          <span class="doe-carousel-position" aria-hidden="true">1 / 6</span>
+          <span class="doe-carousel-status sr-only" role="status">Forest cliffs, 1 of 6</span>
+          <button class="doe-carousel-next" type="button" aria-label="Next reference">›</button>
+          <a class="doe-carousel-original" href="assets/moonlit/reference-assets/forest-cliff.jpeg" target="_blank" rel="noopener">Open original</a>
+        </div>
+      </section>
     </dialog>
     <dialog id="doe-board-preview" class="doe-board-preview" aria-label="DOE concept sketches">
       <button id="doe-board-close" class="doe-preview-close" type="button" aria-label="Close concept board" autofocus><span aria-hidden="true"></span></button>
@@ -96,7 +159,7 @@
         <img id="doe-sketch-image" class="doe-preview-poster doe-sketch-image" alt="">
       </div>
     </dialog>
-    <dialog id="doe-hologram-preview" class="doe-hologram-preview" aria-label="DOE assembly hologram">
+    <dialog id="doe-hologram-preview" class="doe-hologram-preview" aria-label="DOE assembly hologram" data-carousel>
       <img id="doe-hologram-panel" class="doe-hologram-panel" src="assets/doe-hologram/panel.png" width="1448" height="1086" alt="">
       <div id="doe-hologram-activation" class="doe-hologram-activation" aria-hidden="true" hidden></div>
       <button id="doe-hologram-close" class="doe-hologram-close" type="button" aria-label="Close hologram"></button>
