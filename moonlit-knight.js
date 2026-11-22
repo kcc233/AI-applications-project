@@ -23,7 +23,7 @@
   let limits = floor;
   let obstacles = [];
   let destination = null;
-  let approachingPainting = false;
+  let exhibit = null;
   let animation = 0;
   let lastTime = 0;
   let needsSpawn = true;
@@ -145,7 +145,7 @@
         knight.y = obstacle.bottom;
       }
     }
-    if (approachingPainting) continuePaintingApproach();
+    if (exhibit) continueExhibitApproach();
     else if (destination) walkTo(destination.x, destination.y);
     paintKnight();
   }
@@ -171,7 +171,7 @@
       animation = requestAnimationFrame(animateKnight);
     }
     paintKnight();
-    if (!destination && approachingPainting) continuePaintingApproach();
+    if (!destination && exhibit) continueExhibitApproach();
   }
 
   function obstacleEntry(target, obstacle) {
@@ -207,37 +207,45 @@
     if (!animation) animation = requestAnimationFrame(animateKnight);
   }
 
-  function continuePaintingApproach() {
-    const stand = obstacles.find(obstacle => obstacle.element === easel);
-    const x = clamp(stand.approachX, limits.left, limits.right);
-    if (knight.y < stand.bottom) {
-      walkTo(knight.x, stand.bottom);
-    } else if (knight.x !== x || knight.y !== stand.bottom) {
-      walkTo(x, stand.bottom);
+  function continueExhibitApproach() {
+    const { element, dialog } = exhibit;
+    const stand = obstacles.find(obstacle => obstacle.element === element);
+    let x, y;
+    if (stand) {
+      x = stand.approachX;
+      y = stand.bottom;
+    } else {
+      const papers = element.getBoundingClientRect();
+      const scene = balcony.getBoundingClientRect();
+      const scale = layer.width / scene.width;
+      x = (papers.left + papers.width / 2 - scene.left) * scale;
+      y = (papers.bottom - scene.top) * scale + 12;
+    }
+    x = clamp(x, limits.left, limits.right);
+    y = clamp(y, floor.top, floor.bottom);
+    if (knight.y < y) {
+      walkTo(knight.x, y);
+    } else if (knight.x !== x || knight.y !== y) {
+      walkTo(x, y);
     } else {
       stopKnight();
       knight.back = true;
       paintKnight();
-      if (world.open && !parchmentPhotos.open) parchmentPhotos.showModal();
+      if (world.open && !dialog.open) dialog.showModal();
     }
   }
 
-  easel.addEventListener('click', () => {
-    if (!obstacles.length) updateVisibleFloor();
-    approachingPainting = true;
-    continuePaintingApproach();
-  });
-  parchmentPhotos.querySelector('.doe-preview-close').addEventListener('click', () => parchmentPhotos.close());
-  parchmentPhotos.addEventListener('close', () => easel.focus({ preventScroll: true }));
-
   scraps.addEventListener('pointerdown', event => event.stopPropagation());
-  scraps.addEventListener('click', () => {
-    stopKnight();
-    paintKnight();
-    referenceAssets.showModal();
-  });
-  referenceAssets.querySelector('.doe-preview-close').addEventListener('click', () => referenceAssets.close());
-  referenceAssets.addEventListener('close', () => scraps.focus({ preventScroll: true }));
+  for (const [element, dialog] of [[easel, parchmentPhotos], [scraps, referenceAssets]]) {
+    element.addEventListener('click', () => {
+      if (!world.open || dialog.open) return;
+      if (!obstacles.length) updateVisibleFloor();
+      exhibit = { element, dialog };
+      continueExhibitApproach();
+    });
+    dialog.querySelector('.doe-preview-close').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('close', () => element.focus({ preventScroll: true }));
+  }
 
   balcony.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
@@ -245,7 +253,7 @@
     if (clickedProp === easel) return;
     const prop = obstacles.find(obstacle => obstacle.element === clickedProp);
     if (prop) {
-      approachingPainting = false;
+      exhibit = null;
       balcony.focus({ preventScroll: true });
       walkTo(prop.approachX, prop.bottom);
       return;
@@ -254,7 +262,7 @@
     const x = (event.clientX - rect.left) / rect.width * layer.width;
     const y = (event.clientY - rect.top) / rect.height * layer.height;
     if (x < floor.left || x > floor.right || y < floor.top) return;
-    approachingPainting = false;
+    exhibit = null;
     balcony.focus({ preventScroll: true });
     walkTo(x, y);
   });
@@ -262,7 +270,7 @@
   world.addEventListener('keydown', event => {
     const direction = movementDirection(event.key);
     if (!direction) return;
-    approachingPainting = false;
+    exhibit = null;
     event.preventDefault();
     const from = destination ?? knight;
     walkTo(from.x + direction[0] * 28, from.y + direction[1] * 28);
@@ -273,7 +281,7 @@
     animation = 0;
     lastTime = 0;
     destination = null;
-    approachingPainting = false;
+    exhibit = null;
     knight.walkTime = 0;
   }
 
