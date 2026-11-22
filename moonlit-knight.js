@@ -18,6 +18,7 @@
   const props = [
     { element: balcony.querySelector('.moonlit-sketchbook'), base: [.31, .65, .897], approach: .48 },
     { element: easel, base: [.25, .80, 1], approach: .42 },
+    { element: balcony.querySelector('.moonlit-map-table img'), base: [.11, .89, .986], approach: .5 },
   ];
   const knight = { x: 836, y: spawnY, facing: 1, back: false, walkTime: 0 };
   let limits = floor;

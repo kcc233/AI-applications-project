@@ -321,11 +321,13 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   width: var(--balcony-width);
   aspect-ratio: 1672 / 1197;
   transform: translateX(-50%);
+  isolation: isolate;
 }
 .moonlit-balcony::before,
 .moonlit-balcony::after {
   content: "";
   position: absolute;
+  z-index: -1;
   bottom: 0;
   width: var(--edge-width);
   height: 100%;
@@ -370,6 +372,55 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   height: auto;
   image-rendering: pixelated;
   pointer-events: none;
+}
+.moonlit-furnishing {
+  position: absolute;
+  height: auto;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.moonlit-lion-banner {
+  left: -11.90%;
+  top: 25.24%;
+  width: 13.20%;
+}
+.moonlit-ground-prop {
+  top: 76.2%;
+}
+.moonlit-ground-prop::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: var(--shadow-inset);
+  aspect-ratio: 10;
+  transform: translateY(-50%);
+  background: radial-gradient(ellipse, #010616c9, transparent 72%);
+}
+.moonlit-ground-prop img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  transform: translateY(calc(-1 * var(--sprite-base)));
+}
+.moonlit-supply-chest {
+  --sprite-base: 87.9%;
+  --shadow-inset: 12%;
+  left: -11.54%;
+  width: 13.07%;
+}
+.moonlit-map-table {
+  --sprite-base: 98.6%;
+  --shadow-inset: 8%;
+  left: 59.54%;
+  width: 22.82%;
+}
+.moonlit-ivy-planter {
+  --sprite-base: 78.8%;
+  --shadow-inset: 22%;
+  left: 95.06%;
+  width: 18.38%;
 }
 .moonlit-scraps {
   position: absolute;
@@ -428,30 +479,47 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   pointer-events: none;
 }
 .moonlit-prop::before,
-.moonlit-prop::after {
-  content: "";
+.moonlit-prop-glow,
+.moonlit-prop-glow::before {
   position: absolute;
   inset: 0;
 }
 .moonlit-prop::before {
+  content: "";
   clip-path: var(--prop-silhouette);
   pointer-events: auto;
+  cursor: pointer;
 }
-.moonlit-prop::after {
+.moonlit-prop-glow {
+  pointer-events: none;
+  filter: drop-shadow(0 0 5px var(--glow-color)) drop-shadow(0 0 13px var(--glow-color));
+  opacity: .75;
+}
+.moonlit-prop-glow::before {
+  content: "";
   clip-path: var(--prop-highlight);
-  background: radial-gradient(ellipse at var(--glow-center), var(--glow-color), transparent 41%),
+  background: radial-gradient(ellipse at var(--glow-center), var(--glow-tint), transparent 41%),
     var(--prop-art) center / 100% 100% no-repeat;
-  filter: brightness(1.28);
-  opacity: 0;
-  transition: opacity 180ms ease-out;
+  filter: brightness(1.45);
+  transition: filter 180ms ease-out;
 }
-.moonlit-prop:is(:hover, :focus-visible)::after { opacity: 1; }
+.moonlit-prop:is(:hover, :focus-visible) .moonlit-prop-glow::before { filter: brightness(1.7); }
+@media (prefers-reduced-motion: no-preference) {
+  .moonlit-world[open] .moonlit-prop-glow {
+    animation: moonlit-prop-glow 2.8s ease-in-out var(--glow-delay, 0s) infinite;
+  }
+}
+@keyframes moonlit-prop-glow {
+  0%, 100% { opacity: .48; }
+  50% { opacity: 1; }
+}
 .moonlit-sketchbook {
   --prop-art: url("assets/moonlit/sketchbook-lectern.png");
   --prop-silhouette: polygon(32% 12%, 43% 10%, 78% 13%, 79% 19%, 68% 42%, 60% 47%, 58% 73%, 64% 82%, 65% 86%, 59% 90%, 31% 90%, 31% 83%, 39% 78%, 40% 49%, 33% 42%, 21% 40%, 21% 36%);
   --prop-highlight: polygon(37% 15%, 46% 14.7%, 53% 17%, 59% 15.4%, 68% 16.3%, 71% 17.4%, 68% 24%, 64% 35.5%, 53% 35.4%, 46% 36.3%, 42% 34.7%, 28% 34.5%, 30% 28%);
   --glow-center: 50% 25%;
-  --glow-color: #ffd68742;
+  --glow-color: #ffce70;
+  --glow-tint: #ffd68775;
   left: 24.3%;
   top: 76%;
   width: 12.1%;
@@ -463,7 +531,9 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   --prop-silhouette: polygon(20% 15%, 35% 15%, 35% 11%, 40% 10%, 40% 0%, 44% 0%, 45% 10%, 49% 11%, 50% 15%, 65% 15%, 65% 61%, 56% 64%, 58% 99%, 25% 99%, 29% 65%, 27% 64%, 27% 62%, 20% 62%);
   --prop-highlight: inset(18.2% 36.8% 40.8% 21.4%);
   --glow-center: 43% 36%;
-  --glow-color: #66d9ff40;
+  --glow-color: #62dfff;
+  --glow-tint: #66d9ff80;
+  --glow-delay: -1.4s;
   left: 36.5%;
   top: 77.4%;
   width: 24.2%;
@@ -472,14 +542,13 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   border: 0;
   transform: translate(-42.2%, -100%);
 }
-.moonlit-easel::before { cursor: pointer; }
 .moonlit-easel:focus-visible { outline: 2px solid #ffdaa1; outline-offset: -2px; }
 @media (max-aspect-ratio: 1/1) {
   .moonlit-sketchbook { left: calc(25vw - var(--balcony-left)); }
   .moonlit-easel { left: calc(61vw - var(--balcony-left)); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .moonlit-prop::after { transition: none; }
+  .moonlit-prop-glow::before { transition: none; }
 }
 #moonlit-knight {
   position: absolute;
