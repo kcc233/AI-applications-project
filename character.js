@@ -312,6 +312,12 @@ const doePreview = document.querySelector('#doe-preview');
 const doePosterHover = document.querySelector('#doe-poster-hover');
 const doePreviewClose = document.querySelector('#doe-preview-close');
 const doeEnterWorld = document.querySelector('#doe-enter-world');
+const MAGAZINE_FRAME_INDEX = 3;
+const magazinePortal = document.querySelector('#magazine-portal');
+const magazinePlaquePortal = document.querySelector('#magazine-plaque-portal');
+const magazinePreview = document.querySelector('#magazine-preview');
+const magazineFrame = magazinePreview.querySelector('iframe');
+let magazineOpener;
 const MOONLIT_FRAME_INDEX = 4;
 const moonlitPortal = document.querySelector('#moonlit-portal');
 const moonlitPreview = document.querySelector('#moonlit-preview');
@@ -408,10 +414,14 @@ function updateSceneControls() {
   doePortal.hidden = activeScene !== 'museum';
   doePlaquePortal.hidden = activeScene !== 'museum';
   moonlitPortal.hidden = activeScene !== 'museum';
+  magazinePortal.hidden = activeScene !== 'museum';
+  magazinePlaquePortal.hidden = activeScene !== 'museum';
   if (activeScene === 'museum') {
     positionGalleryPortal(doePortal, scene.frames.find(frame => frame.index === 5));
     positionGalleryPortal(doePlaquePortal, scene.plaques.find(plaque => plaque.index === 5));
     positionGalleryPortal(moonlitPortal, scene.frames.find(frame => frame.index === MOONLIT_FRAME_INDEX));
+    positionGalleryPortal(magazinePortal, scene.frames.find(frame => frame.index === MAGAZINE_FRAME_INDEX));
+    positionGalleryPortal(magazinePlaquePortal, scene.plaques.find(plaque => plaque.index === MAGAZINE_FRAME_INDEX));
   }
   canvas.setAttribute('aria-label', activeScene === 'doe'
     ? 'DOE design workshop. An antlered armored character explores a workshop with a concept desk, green assembly hologram, and final DOE display. Click or tap the tiled floor to walk.'
@@ -512,6 +522,28 @@ bindArtworkTilt(doePosterHover, doePreview);
 function showMoonlitPreview() {
   if (activeScene === 'museum' && !moonlitPreview.open && !openingDoe) moonlitPreview.showModal();
 }
+
+function showMagazinePreview() {
+  if (!magazineFrame.hasAttribute('src')) magazineFrame.src = 'magazineproject/index.html';
+  magazinePreview.showModal();
+}
+
+for (const portal of [magazinePortal, magazinePlaquePortal]) {
+  portal.addEventListener('click', () => {
+    magazineOpener = portal;
+    approachMuseumFrame(MAGAZINE_FRAME_INDEX, magazinePreview, showMagazinePreview);
+  });
+}
+magazinePreview.querySelector('.doe-preview-close').addEventListener('click', () => magazinePreview.close());
+magazinePreview.addEventListener('close', () => magazineOpener.focus({ preventScroll: true }));
+magazineFrame.addEventListener('load', () => {
+  // Keyboard events inside the embedded page stay in its document.
+  magazineFrame.contentDocument?.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !magazinePreview.open) return;
+    event.preventDefault();
+    magazinePreview.close();
+  });
+});
 
 function maskMoonlitFire(sheet) {
   const masked = document.createElement('canvas');
@@ -633,6 +665,8 @@ doeEnterWorld.addEventListener('click', () => {
 });
 doePlaquePortal.addEventListener('pointermove', handleGalleryHover);
 doePlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+magazinePlaquePortal.addEventListener('pointermove', handleGalleryHover);
+magazinePlaquePortal.addEventListener('pointerleave', clearGalleryHover);
 museumBack.addEventListener('click', returnToMuseum);
 function showDoeConceptBoard() {
   if (activeScene === 'doe' && !doeBoardPreview.open) doeBoardPreview.showModal();
