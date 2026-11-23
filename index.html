@@ -10,9 +10,11 @@
     <link rel="preload" as="image" href="assets/doe-preview/rising-smoke-frames.png">
     <link rel="preload" as="image" href="assets/moonlit/fire-breath-frames.png">
     <link rel="preload" as="image" href="assets/doe-hologram/activation.png">
+    <link rel="preload" as="image" href="assets/drizzle/phone-lock.png" fetchpriority="low">
     <script src="room.js" defer></script>
     <script src="doe-scene.js" defer></script>
     <script src="character.js" defer></script>
+    <script src="drizzle-train.js" defer></script>
     <script src="moonlit-knight.js" defer></script>
     <script src="doe-carousel.js" defer></script>
     <script src="airpod-book.js" defer></script>
@@ -31,9 +33,13 @@
     </section>
     <main class="gallery" aria-label="A sunlit gallery room" inert>
       <canvas id="room" width="790" height="510" tabindex="0" role="application" aria-describedby="controls" aria-label="A pixel-art museum room in warm afternoon sunlight. Six ornate gold frames display Whack-a-Mole, Puma Dunk, Drizzle App, HTML CSS Project, a moonlit dragon and castle, and a DOE antlered warrior above a wooden bench, with an AirPod Prototype on a marble pedestal on the left and a classical marble bust on the right.">A sunlit gallery with six framed pixel artworks, a playable character, a wooden bench, an AirPod Prototype, and a marble bust.</canvas>
+      <canvas id="plaque-labels" aria-hidden="true"></canvas>
+      <canvas id="museum-foreground" aria-hidden="true"></canvas>
       <button id="doe-portal" class="artwork-portal" type="button" aria-label="View the DOE poster" aria-haspopup="dialog"></button>
       <button id="doe-plaque-portal" class="artwork-portal" type="button" aria-label="DOE plaque: view the DOE poster" aria-haspopup="dialog"></button>
       <button id="moonlit-portal" class="artwork-portal" type="button" aria-label="View Moonlit Dragon and Castle" aria-haspopup="dialog" hidden></button>
+      <button id="drizzle-portal" class="artwork-portal" type="button" aria-label="View Drizzle App" aria-haspopup="dialog" hidden></button>
+      <button id="drizzle-plaque-portal" class="artwork-portal" type="button" aria-label="Drizzle App plaque, view the app preview" aria-haspopup="dialog" hidden></button>
       <button id="magazine-portal" class="artwork-portal" type="button" aria-label="Open SlopeStyle, the HTML CSS Project" aria-haspopup="dialog" hidden></button>
       <button id="magazine-plaque-portal" class="artwork-portal" type="button" aria-label="HTML CSS Project plaque, open SlopeStyle" aria-haspopup="dialog" hidden></button>
       <button id="airpod-exhibit" class="artwork-portal" type="button" aria-label="Visit the AirPod Prototype and read its project book"></button>
@@ -43,7 +49,7 @@
       </button>
       <button id="doe-hologram" class="doe-hologram" type="button" aria-label="Walk to the DOE assembly hologram" aria-haspopup="dialog" hidden></button>
       <p id="scene-status" class="scene-status" role="status" hidden></p>
-      <p id="controls" class="sr-only">Click or tap the floor to walk. You can also use the arrow keys or W, A, S, and D. Select the DOE or Moonlit Dragon frame to view the artwork, the HTML CSS Project to open SlopeStyle, or the AirPod Prototype to read its project book. Use Back to museum or Escape to return from an exhibit.</p>
+      <p id="controls" class="sr-only">Click or tap the floor to walk. You can also use the arrow keys or W, A, S, and D. Select the DOE, Moonlit Dragon, or Drizzle App frame to open its preview, the HTML CSS Project to open SlopeStyle, or the AirPod Prototype to read its project book. Use Back to museum or Escape to return from an exhibit.</p>
     </main>
     <div id="doe-smoke" class="doe-smoke" aria-hidden="true" hidden>
     </div>
@@ -64,6 +70,80 @@
       <button id="moonlit-enter-world" class="doe-enter-world" type="button" aria-label="Enter Moonlit Castle world" aria-haspopup="dialog">
         <img src="assets/moonlit/enter-world.png" width="2172" height="724" alt="">
       </button>
+    </dialog>
+    <dialog id="drizzle-preview" class="doe-preview drizzle-preview" aria-label="Drizzle App preview">
+      <button class="doe-preview-close" type="button" aria-label="Close Drizzle App preview" autofocus><span aria-hidden="true"></span></button>
+      <div class="doe-poster-hover">
+        <img class="doe-preview-poster" src="assets/drizzle/app-preview.png" width="398" height="858" alt="Drizzle weather app showing snow at Mount Seymour in Vancouver.">
+      </div>
+      <button id="drizzle-enter-world" class="doe-enter-world" type="button" aria-label="Enter Drizzle world" aria-haspopup="dialog">
+        <img src="assets/drizzle/enter-world.png" width="2172" height="724" alt="">
+      </button>
+    </dialog>
+    <dialog id="drizzle-world" class="drizzle-world" aria-label="Drizzle train car">
+      <div class="drizzle-train" tabindex="0" aria-describedby="drizzle-controls" autofocus>
+        <img src="assets/drizzle/train-interior.png" width="1672" height="941" alt="A train car with blue bench seats, yellow handrails, and snow falling over the city outside.">
+        <span class="drizzle-passenger drizzle-passenger-newspaper" role="img" aria-label="A passenger reading a newspaper"></span>
+        <span class="drizzle-passenger drizzle-passenger-phone-talk" role="img" aria-label="A passenger talking on the phone"></span>
+        <span class="drizzle-passenger drizzle-passenger-sleepy" role="img" aria-label="A passenger dozing off"></span>
+        <span class="drizzle-passenger drizzle-passenger-phone-glow" role="img" aria-label="A passenger looking at their phone"></span>
+        <canvas width="1672" height="941" aria-hidden="true"></canvas>
+      </div>
+      <p id="drizzle-controls" class="sr-only">Click or tap the train floor or use the arrow keys or W, A, S, and D to walk. Press Escape to return to the museum.</p>
+      <button class="back-button" type="button">Back to museum</button>
+      <button class="drizzle-open-phone" type="button" aria-haspopup="dialog" aria-controls="drizzle-phone">
+        <img src="assets/drizzle/open-phone.png" width="2172" height="724" alt="Open phone">
+      </button>
+    </dialog>
+    <dialog id="drizzle-phone" class="doe-preview drizzle-phone" aria-label="Drizzle phone">
+      <button class="doe-preview-close" type="button" aria-label="Close phone"><span aria-hidden="true"></span></button>
+      <div class="drizzle-phone-handset">
+        <img class="drizzle-phone-home" src="assets/drizzle/phone-home.png" width="920" height="1708"
+          alt="Phone home screen with Research, Mid-fidelity, and Drizzle apps." aria-hidden="true">
+        <div class="drizzle-phone-display">
+          <button class="drizzle-phone-lock" type="button" aria-label="Unlock phone" autofocus></button>
+          <button class="drizzle-phone-app-icon drizzle-research-icon" type="button" aria-label="Open Research" aria-controls="drizzle-research" hidden></button>
+          <button class="drizzle-phone-app-icon drizzle-mid-fidelity-icon" type="button" aria-label="Open Mid-fidelity" aria-controls="drizzle-mid-fidelity" hidden></button>
+          <button class="drizzle-phone-app-icon drizzle-weather-icon" type="button" aria-label="Open Drizzle" aria-controls="drizzle-weather" hidden></button>
+          <section id="drizzle-research" class="drizzle-research" aria-label="Drizzle research" hidden>
+            <div class="drizzle-research-viewport" tabindex="0" role="region" aria-label="Research board. Drag or use the arrow keys to pan.">
+              <img src="assets/drizzle/research-board.jpg" width="7000" height="3819" loading="lazy" draggable="false"
+                alt="Drizzle research board with a mind map, project rationale, two commuter personas, weather app references, and a user flow.">
+            </div>
+            <div class="drizzle-research-controls">
+              <button type="button" class="drizzle-research-home">‹ Home</button>
+              <button type="button" data-zoom="out" aria-label="Zoom out">−</button>
+              <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
+            </div>
+          </section>
+          <section id="drizzle-mid-fidelity" class="drizzle-phone-preview" aria-label="Drizzle mid-fidelity prototype" hidden>
+            <div class="drizzle-phone-preview-views" aria-live="polite">
+              <img id="drizzle-mid-today" src="assets/drizzle/mid-fidelity-today.jpg" width="804" height="1748" alt="Today home screen showing current weather, a clothing suggestion, and commute times.">
+              <img id="drizzle-mid-forecast" src="assets/drizzle/mid-fidelity-forecast.jpg" width="804" height="1748" alt="Forecast screen showing hourly weather, snow depth, wind speed, and a three-day outlook." hidden>
+              <img id="drizzle-mid-map" src="assets/drizzle/mid-fidelity-map.jpg" width="804" height="1748" alt="Map screen showing Vancouver with three weather markers." hidden>
+            </div>
+            <nav class="drizzle-phone-preview-nav" aria-label="Prototype views">
+              <button type="button" aria-label="Today, home" aria-controls="drizzle-mid-today" aria-current="page"></button>
+              <button type="button" aria-label="Forecast" aria-controls="drizzle-mid-forecast"></button>
+              <button type="button" aria-label="Map" aria-controls="drizzle-mid-map"></button>
+            </nav>
+            <button class="drizzle-phone-preview-home" type="button" aria-label="Return to phone home screen"></button>
+          </section>
+          <section id="drizzle-weather" class="drizzle-phone-preview drizzle-weather" aria-label="Drizzle weather app" hidden>
+            <div class="drizzle-phone-preview-views" aria-live="polite">
+              <img id="drizzle-weather-today" src="assets/drizzle/weather-today.jpg" width="804" height="1748" alt="Today at Mount Seymour with snowfall, clothing suggestions, and commute times.">
+              <img id="drizzle-weather-forecast" src="assets/drizzle/weather-forecast.jpg" width="804" height="1748" alt="Hourly and three-day snowfall forecasts, snow depth, and wind speed." hidden>
+              <img id="drizzle-weather-map" src="assets/drizzle/weather-map.jpg" width="804" height="1748" alt="Vancouver-area precipitation map showing heavy snow in North Vancouver." hidden>
+            </div>
+            <nav class="drizzle-phone-preview-nav" aria-label="Drizzle views">
+              <button type="button" aria-label="Today, home" aria-controls="drizzle-weather-today" aria-current="page"></button>
+              <button type="button" aria-label="Forecast" aria-controls="drizzle-weather-forecast"></button>
+              <button type="button" aria-label="Map" aria-controls="drizzle-weather-map"></button>
+            </nav>
+            <button class="drizzle-phone-preview-home" type="button" aria-label="Return to phone home screen"></button>
+          </section>
+        </div>
+      </div>
     </dialog>
     <dialog id="magazine-preview" class="doe-preview magazine-preview" aria-label="SlopeStyle magazine">
       <button class="doe-preview-close" type="button" aria-label="Close SlopeStyle" autofocus><span aria-hidden="true"></span></button>

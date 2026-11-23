@@ -1,6 +1,8 @@
 /* A hand-drawn, deterministic canvas scene. No images, libraries, or build step. */
 'use strict';
 const canvas = document.querySelector('#room');
+const plaqueCanvas = document.querySelector('#plaque-labels');
+const museumForeground = document.querySelector('#museum-foreground');
 let ctx = canvas.getContext('2d', { alpha: false });
 let scene = null;
 let activeScene = 'museum';
@@ -35,6 +37,8 @@ const artworkReady = Promise.all([...artworks, caseArtwork].map(artwork => new P
 })));
 
 function renderRoom() {
+plaqueCanvas.hidden = activeScene !== 'museum';
+museumForeground.hidden = plaqueCanvas.hidden;
 if (activeScene === 'doe') {
   renderDoeRoom();
   return;
@@ -51,6 +55,8 @@ const top = -Math.floor((roomHeight - 510) * .45);
 const bottomEdge = top + roomHeight;
 canvas.width = roomWidth;
 canvas.height = roomHeight;
+museumForeground.width = roomWidth;
+museumForeground.height = roomHeight;
 ctx.imageSmoothingEnabled = false;
 ctx.translate(-left, -top);
 let seed = 17926;
@@ -268,34 +274,12 @@ function frame(x,y,w,h,artwork,paintArt){
   ornament(x+5,y+h/2,.85,-Math.PI/2);ornament(x+w-5,y+h/2,.85,Math.PI/2);
   for(const [cx,cy,r] of [[x+5,y+5,-.7],[x+w-5,y+5,.7],[x+5,y+h-5,-2.4],[x+w-5,y+h-5,2.4]])ornament(cx,cy,.84,r);
 }
-// Tiny bitmap lettering keeps the plaques in the room's pixel-art style.
-const plaqueLetters = {
-  A:'010101111101101', B:'110101110101110', C:'011100100100011',
-  D:'110101101101110', E:'111100110100111', F:'111100110100100',
-  G:'011100101101011', H:'101101111101101', I:'111010010010111',
-  J:'001001001101010', K:'101101110101101', L:'100100100100111',
-  M:'101111111101101', N:'101111111111101', O:'010101101101010',
-  P:'110101110100100', Q:'010101101111011', R:'110101110101101',
-  S:'011100010001110', T:'111010010010010', U:'101101101101111',
-  V:'101101101101010', W:'101101111111101', X:'101101010101101',
-  Y:'101101010010010', Z:'111001010100111', '-':'000000111000000',
-};
-function plaqueText(text, centerX, y) {
-  const start = Math.round(centerX - (text.length * 4 - 1) / 2);
-  [...text].forEach((letter, index) => {
-    const bitmap = plaqueLetters[letter];
-    if (!bitmap) return;
-    [...bitmap].forEach((pixel, i) => {
-      if (pixel === '1') rect(start + index * 4 + i % 3, y + Math.floor(i / 3), 1, 1, '#492608');
-    });
-  });
-}
 const plaques = [];
 const frames = [];
 function plaque(centerX, y, lines, index, { width = 100, studs = true } = {}) {
   const height = 20, x = Math.round(centerX - width / 2);
   y = Math.round(y);
-  plaques.push({ x, y, width, height, index });
+  plaques.push({ x, y, width, height, index, lines, studs });
   // Stepped corners, beveled brass edges, hammered gold, and four square rivets.
   rect(x + 2, y + 2, width, height, '#5b381a40');
   rect(x + 2, y, width - 4, height, '#69400e');
@@ -318,7 +302,6 @@ function plaque(centerX, y, lines, index, { width = 100, studs = true } = {}) {
       }
     }
   }
-  lines.forEach((text, i) => plaqueText(text, centerX, y + (lines.length === 1 ? 8 : 4 + i * 8)));
 }
 const plaqueTitles = [
   ['WHACK-A-MOLE'], ['PUMA DUNK'], ['DRIZZLE APP'],
@@ -531,7 +514,59 @@ background.width = roomWidth;
 background.height = roomHeight;
 background.getContext('2d').drawImage(canvas, 0, 0);
 scene = { left, right, top, bottom: bottomEdge, floorTop: 351, background, bench: benchLayer, plaques, frames };
+paintPlaqueLabels(viewportWidth, viewportHeight);
 canvas.dispatchEvent(new CustomEvent('galleryresize'));
+}
+
+const plaqueLetters = {
+  A:'010101111101101', B:'110101110101110', C:'011100100100011',
+  D:'110101101101110', E:'111100110100111', F:'111100110100100',
+  G:'011100101101011', H:'101101111101101', I:'111010010010111',
+  J:'001001001101010', K:'101101110101101', L:'100100100100111',
+  M:'101111111101101', N:'101111111111101', O:'010101101101010',
+  P:'110101110100100', Q:'010101101111011', R:'110101110101101',
+  S:'011100010001110', T:'111010010010010', U:'101101101101111',
+  V:'101101101101010', W:'101101111111101', X:'101101010101101',
+  Y:'101101010010010', Z:'111001010100111', '-':'000000111000000',
+};
+
+function paintPlaqueLabels(viewportWidth, viewportHeight) {
+  const pixelRatio = window.devicePixelRatio || 1;
+  plaqueCanvas.width = Math.max(1, Math.round(viewportWidth * pixelRatio));
+  plaqueCanvas.height = Math.max(1, Math.round(viewportHeight * pixelRatio));
+
+  const labels = plaqueCanvas.getContext('2d');
+  labels.fillStyle = '#321a08';
+  const scaleX = plaqueCanvas.width / canvas.width;
+  const scaleY = plaqueCanvas.height / canvas.height;
+  const cellHeight = 1.2 * scaleY;
+  const lineHeight = 8 * scaleY;
+
+  for (const { x, y, width, height, lines, studs } of scene.plaques) {
+    const cellWidth = (studs ? 1.18 : 1.05) * scaleX;
+    const textHeight = 5 * cellHeight + (lines.length - 1) * lineHeight;
+    const centerX = (x - scene.left + width / 2) * scaleX;
+    const textTop = (y - scene.top + height / 2) * scaleY - textHeight / 2;
+
+    lines.forEach((text, row) => {
+      const lineLeft = centerX - (text.length * 4 - 1) * cellWidth / 2;
+      const lineTop = textTop + row * lineHeight;
+      [...text].forEach((letter, column) => {
+        const bitmap = plaqueLetters[letter];
+        if (!bitmap) return;
+        for (let i = 0; i < bitmap.length; i++) {
+          if (bitmap[i] !== '1') continue;
+          const pixelX = lineLeft + (column * 4 + i % 3) * cellWidth;
+          const pixelY = lineTop + Math.floor(i / 3) * cellHeight;
+          // Align both edges to physical pixels so the scene's scaling cannot soften them.
+          const left = Math.round(pixelX);
+          const top = Math.round(pixelY);
+          labels.fillRect(left, top, Math.round(pixelX + cellWidth) - left,
+            Math.round(pixelY + cellHeight) - top);
+        }
+      });
+    });
+  }
 }
 
 let resizeFrame;

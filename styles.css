@@ -6,6 +6,8 @@ body { overflow: hidden; background: #c49b55; }
 canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 canvas { cursor: crosshair; touch-action: none; }
 canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
+#plaque-labels, #museum-foreground { position: absolute; inset: 0; pointer-events: none; }
+#plaque-labels { image-rendering: auto; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .artwork-portal { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .artwork-portal:focus-visible { outline: 3px solid #ffe092; outline-offset: 4px; }
@@ -287,10 +289,13 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   width: min(calc(100vw - 32px), 1050px, calc((100dvh - 58px - var(--moonlit-button-width) / 3) * 16 / 9));
 }
 .moonlit-preview::backdrop,
+.drizzle-preview::backdrop,
 .magazine-preview::backdrop { background: #080f1ae0; }
 .moonlit-preview .doe-enter-world { width: min(100%, var(--moonlit-button-width)); }
 .moonlit-preview button:focus-visible,
+.drizzle-preview button:focus-visible,
 .magazine-preview button:focus-visible { outline-color: #7ddbff; }
+.drizzle-preview { width: min(calc(100vw - 32px), 360px, calc((100dvh - 58px) * .4)); }
 .magazine-preview { width: min(calc(100vw - 32px), 1440px); }
 .magazine-preview iframe {
   display: block;
@@ -308,7 +313,8 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   background: rgb(0 0 0 / var(--fire-backdrop-opacity, 1));
   cursor: wait;
 }
-.moonlit-world {
+.moonlit-world,
+.drizzle-world {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -320,6 +326,285 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   border: 0;
   overflow: hidden;
   background: #071228;
+}
+.drizzle-open-phone {
+  position: absolute;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 50%;
+  width: clamp(146px, 20vw, 252px);
+  transform: translateX(-50%);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.drizzle-open-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  transition: filter 160ms ease-out;
+}
+.drizzle-open-phone:is(:hover, :focus-visible) img {
+  filter: brightness(1.15) drop-shadow(0 0 5px #34efff) drop-shadow(0 0 12px #08b9ffbb);
+}
+.drizzle-phone {
+  width: min(calc(100vw - 24px), 410px, calc((100dvh - 56px) * 920 / 1708));
+}
+.drizzle-phone::backdrop { background: #071228b8; }
+.drizzle-phone .doe-preview-close {
+  border-color: #659ccf;
+  background: #13294d;
+  color: #d2eeff;
+}
+.drizzle-phone-handset {
+  --lock-art: url("assets/drizzle/phone-lock.png");
+  --screen-shape: inset(2.7% 8.8% 3.3% 10.1% round 14% / 7%);
+  position: relative;
+  isolation: isolate;
+}
+.drizzle-phone-home {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+.drizzle-phone-display,
+.drizzle-phone-lock,
+.drizzle-phone-lock::before,
+.drizzle-phone-display::after {
+  position: absolute;
+  inset: 0;
+}
+.drizzle-phone-display {
+  clip-path: var(--screen-shape);
+  pointer-events: none;
+}
+.drizzle-phone-lock::before,
+.drizzle-phone-display::after {
+  content: "";
+  background: var(--lock-art) center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+}
+.drizzle-phone-lock {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.drizzle-phone-lock::before {
+  clip-path: inset(8.4% 8.8% 3.3% 10.1% round 0 0 14% 14% / 0 0 7% 7%);
+}
+.drizzle-phone-lock:focus-visible {
+  filter: brightness(1.11);
+}
+/* Keep the camera cutout and status bar in place during the swipe. */
+.drizzle-phone-display::after {
+  clip-path: inset(0 0 91.6%);
+  pointer-events: none;
+}
+.drizzle-phone.is-unlocked .drizzle-phone-lock { pointer-events: none; }
+.drizzle-phone.is-unlocked .drizzle-phone-lock::before { transform: translateY(-100%); }
+.drizzle-phone.is-unlocked .drizzle-phone-display::after { opacity: 0; }
+.drizzle-phone-app-icon {
+  position: absolute;
+  top: 23.7%;
+  width: 22.4%;
+  height: 16.2%;
+  padding: 0;
+  border: 0;
+  border-radius: 20%;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.drizzle-research-icon { left: 14.3%; }
+.drizzle-mid-fidelity-icon { left: 39.7%; }
+.drizzle-weather-icon { left: 65%; }
+.drizzle-phone-app-icon:hover { background: #d9f8ff24; }
+.drizzle-research,
+.drizzle-phone-preview {
+  position: absolute;
+  inset: 2.7% 8.8% 3.3% 10.1%;
+  pointer-events: auto;
+}
+.drizzle-research { background: #f4f4f4; }
+.drizzle-phone-preview { background: #fefefe; }
+.drizzle-phone-preview-views,
+.drizzle-phone-preview-views img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.drizzle-phone-preview-views img { object-fit: cover; }
+.drizzle-phone-preview-nav {
+  position: absolute;
+  inset: 83% 7% 8%;
+  display: flex;
+  justify-content: space-between;
+}
+.drizzle-phone-preview-nav button {
+  width: 28%;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.drizzle-phone-preview-nav button:hover { background: #3277b812; }
+.drizzle-phone-preview-home {
+  position: absolute;
+  inset: auto 30% 1% 30%;
+  height: 6%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+.drizzle-phone-preview-home::after {
+  content: "";
+  width: 62%;
+  height: 4px;
+  border-radius: 4px;
+  background: #142738;
+}
+.drizzle-weather { background: #a9c6e2; }
+.drizzle-weather .drizzle-phone-preview-nav { inset-block: 87.5% 3.3%; }
+.drizzle-weather .drizzle-phone-preview-home { bottom: 0; height: 3.3%; }
+.drizzle-research-viewport {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.drizzle-research-viewport:active { cursor: grabbing; }
+.drizzle-research-viewport img {
+  display: block;
+  width: var(--research-board-width, 1900px);
+  height: auto;
+  pointer-events: none;
+}
+.drizzle-research-controls {
+  position: absolute;
+  inset: auto 9% 3%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+}
+.drizzle-research-controls button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 7px;
+  border: 1px solid #659ccf;
+  border-radius: 6px;
+  background: #13294d;
+  color: #d2eeff;
+  font: 600 13px monospace;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.drizzle-research-controls button:hover { background: #234875; }
+.drizzle-research-controls button:disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: no-preference) {
+  .drizzle-phone.is-unlocked .drizzle-phone-lock::before {
+    transition: transform 480ms cubic-bezier(.22, .7, .25, 1);
+  }
+  .drizzle-phone.is-unlocked .drizzle-phone-display::after {
+    transition: opacity 160ms ease-out 120ms;
+  }
+}
+.drizzle-train {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: max(100%, calc(100dvh * 1672 / 941));
+  aspect-ratio: 1672 / 941;
+  transform: translateX(-50%);
+  background: linear-gradient(#b9cee4, #e5edf4 55%, #8b99b3);
+  cursor: crosshair;
+  touch-action: none;
+}
+.drizzle-train::before {
+  content: "";
+  position: absolute;
+  inset: 20% 0 52%;
+  background:
+    url("assets/drizzle/pixel-snow-loop.webp") center bottom / cover no-repeat,
+    url("assets/drizzle/skytrain-city-loop.webp") center bottom / cover no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.drizzle-train img,
+.drizzle-train canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.drizzle-passenger {
+  position: absolute;
+  left: var(--seat-x);
+  /* Keep the seated poses back on the cushion as the train scales. */
+  top: 73.5%;
+  width: var(--passenger-width, 15%);
+  aspect-ratio: var(--sprite-ratio, 543 / 724);
+  transform: translate(-50%, var(--sprite-foot));
+  background: var(--passenger-art) 0 0 / var(--sheet-width, 400%) 100% no-repeat;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+.drizzle-passenger-newspaper,
+.drizzle-passenger-phone-glow {
+  --sprite-ratio: 2 / 3;
+  --sheet-width: 100%;
+}
+.drizzle-passenger-newspaper {
+  --passenger-art: url("assets/drizzle/passenger-newspaper.png");
+  --seat-x: 30.8%;
+  --sprite-foot: -89.8%;
+}
+.drizzle-passenger-phone-talk {
+  --passenger-art: url("assets/drizzle/passenger-phone-talk.png");
+  --seat-x: 50.9%;
+  --sprite-foot: -91.2%;
+}
+.drizzle-passenger-sleepy {
+  --passenger-art: url("assets/drizzle/passenger-sleepy.png");
+  --seat-x: 63%;
+  --sprite-foot: -96.4%;
+  --passenger-width: 14.4%;
+}
+.drizzle-passenger-phone-glow {
+  --passenger-art: url("assets/drizzle/passenger-phone-glow.png");
+  --seat-x: 72.2%;
+  --sprite-foot: -87.6%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .drizzle-world[open] .drizzle-passenger-phone-talk {
+    animation: drizzle-passenger-cycle 1.6s step-end infinite;
+  }
+  .drizzle-world[open] .drizzle-passenger-sleepy {
+    animation: drizzle-passenger-cycle 4s step-end infinite;
+  }
+}
+@keyframes drizzle-passenger-cycle {
+  0% { background-position-x: 0%; }
+  25% { background-position-x: 33.3333%; }
+  50% { background-position-x: 66.6667%; }
+  75% { background-position-x: 100%; }
 }
 .moonlit-balcony {
   --balcony-width: clamp(calc(100dvh * 1672 / 1197), 100vw, calc(116dvh * 1672 / 1197));

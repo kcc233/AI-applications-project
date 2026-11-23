@@ -2,9 +2,17 @@
 'use strict';
 const MOVE_SPEED = 225; // Room units per second.
 const WALK_FRAME_RATE = 8; // Animation frames per second, independent of travel.
+const MUSEUM_VISITOR_HEIGHT = 120;
 const WALK_DIRECTIONS = { ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] };
 const movementDirection = key => WALK_DIRECTIONS[key.length === 1 ? key.toLowerCase() : key];
 const player = { x: 345, y: 467, facing: 1, back: false, walkTime: 0 };
+const museumVisitor = new Image();
+museumVisitor.addEventListener('load', () => {
+  if (activeScene === 'museum') paintScene();
+});
+museumVisitor.src = 'assets/characters/museum-adventurer.png';
+// The poses are spaced unevenly. Center each crop on its own head and keep a shared foot baseline per row.
+const museumVisitorFrameX = [46, 325, 588, 845, 1119];
 const obstacles = [
   { left: 202, right: 487, top: 361, bottom: 430 }, // bench plus foot clearance
   { left: 607, right: 691, top: 337, bottom: 364 }, // pedestal
@@ -22,7 +30,7 @@ const clamp = (n, low, high) => Math.max(low, Math.min(high, n));
 const inside = (p, r) => p.x > r.left && p.x < r.right && p.y > r.top && p.y < r.bottom;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const floorTop = () => scene.floorTop ?? 351;
-const playerMargin = () => activeScene === 'doe' ? Math.ceil(scene.avatarHeight * .36) : 19;
+const playerMargin = () => activeScene === 'doe' ? Math.ceil(scene.avatarHeight * .36) : 31;
 const sceneObstacles = () => scene.obstacles ?? obstacles;
 
 function floorPoint(point) {
@@ -92,61 +100,33 @@ function findRoute(destination) {
   return [];
 }
 
-function drawPlayer() {
+function drawPlayer(painter) {
   const moving = route.length > 0;
   const phase = moving ? Math.floor(player.walkTime * WALK_FRAME_RATE) % 4 : 0;
-  const swing = moving ? [0, 1, 0, -1][phase] : 0;
   const bob = moving && !reducedMotion.matches && phase % 2 ? -1 : 0;
   const perspective = clamp(.86 + (player.y - floorTop()) / 650, .86, 1.25);
   if (activeScene === 'doe') {
     drawDoePlayer(phase, bob, perspective);
     return;
   }
-  ctx.save();
-  ctx.translate(Math.round(player.x), Math.round(player.y));
-  ctx.fillStyle = '#3b2b1a45';
-  ctx.fillRect(-13 * perspective, -2, 26 * perspective, 4);
-  ctx.fillRect(-9 * perspective, 2, 18 * perspective, 2);
-  ctx.scale(player.facing * perspective * 3, perspective * 3);
-  drawMuseumVisitor(ctx, swing, bob, player.back);
-  ctx.restore();
-}
-
-function drawMuseumVisitor(painter, swing, bob, back) {
-  const pixel = (x, y, w, h, color) => {
-    painter.fillStyle = color;
-    painter.fillRect(x, y + bob, w, h);
-  };
-  const skin = '#f0c99f', shade = '#cf9b78', hair = '#69442f';
-  const shirt = '#a2af83', pants = '#344958';
-  // Alternating legs, boots, and arms form a four-frame eight-bit walk cycle.
-  pixel(-3, -6, 3, 5 + swing, pants);
-  pixel(1, -6, 3, 5 - swing, pants);
-  pixel(-4, -1 + swing, 4, 1, '#2d332a');
-  pixel(1, -1 - swing, 4, 1, '#2d332a');
-  pixel(-5, -12 - swing, 2, 7, shirt);
-  pixel(-5, -8 - swing, 2, 3, skin);
-  pixel(-3, -12, 6, 6, shirt);
-  pixel(3, -12 + swing, 2, 7, shirt);
-  pixel(3, -8 + swing, 2, 3, shade);
-  pixel(-3, -12, 1, 5, '#f6e9c9');
-  pixel(-1, -14, 2, 2, skin);
-  pixel(-4, -13, 3, 1, '#293e31');
-  pixel(1, -13, 3, 1, '#293e31');
-  pixel(-4, -21, 8, 7, skin);
-  pixel(2, -19, 2, 5, shade);
-  pixel(-4, -21, 8, 3, hair);
-  pixel(-4, -18, 3, 1, hair);
-  pixel(-4, -16, 1, 2, hair);
-  pixel(3, -16, 1, 2, hair);
-  if (back) {
-    pixel(-4, -18, 8, 3, hair);
-    pixel(-3, -15, 6, 1, hair);
-  } else {
-    pixel(-2, -18, 1, 1, '#294333');
-    pixel(1, -18, 1, 1, '#294333');
-    pixel(-1, -16, 2, 1, shade);
+  painter.save();
+  painter.translate(Math.round(player.x), Math.round(player.y));
+  const shadowScale = MUSEUM_VISITOR_HEIGHT * perspective / 96;
+  painter.fillStyle = '#3b2b1a45';
+  painter.fillRect(-18 * shadowScale, -2, 36 * shadowScale, 4);
+  painter.fillRect(-12 * shadowScale, 2, 24 * shadowScale, 2);
+  if (museumVisitor.naturalWidth) {
+    const frame = moving ? phase + 1 : 0;
+    const sourceWidth = 240;
+    const sourceHeight = 505;
+    const height = Math.round(MUSEUM_VISITOR_HEIGHT * perspective);
+    const width = Math.round(height * sourceWidth / sourceHeight);
+    painter.imageSmoothingEnabled = false;
+    painter.scale(player.facing, 1);
+    painter.drawImage(museumVisitor, museumVisitorFrameX[frame], player.back ? 574 : 10, sourceWidth, sourceHeight,
+      -Math.round(width / 2), -height, width, height);
   }
+  painter.restore();
 }
 
 function shineIsMoving(time) {
@@ -184,14 +164,19 @@ function paintScene(time = performance.now()) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(scene.background, 0, 0);
   drawPlaqueShine(time);
-  const paintAvatar = () => {
-    ctx.save(); ctx.translate(-scene.left, -scene.top); drawPlayer(); ctx.restore();
+  const paintAvatar = painter => {
+    painter.save();
+    painter.translate(-scene.left, -scene.top);
+    drawPlayer(painter);
+    painter.restore();
   };
   if (scene.bench) {
-    if (player.y < 430) paintAvatar();
-    ctx.drawImage(scene.bench, 0, 0);
-    if (player.y >= 430) paintAvatar();
-  } else paintAvatar();
+    const foreground = museumForeground.getContext('2d');
+    foreground.clearRect(0, 0, museumForeground.width, museumForeground.height);
+    if (player.y < 430) paintAvatar(foreground);
+    foreground.drawImage(scene.bench, 0, 0);
+    if (player.y >= 430) paintAvatar(foreground);
+  } else paintAvatar(ctx);
 }
 
 function animate(time) {
@@ -312,6 +297,12 @@ const doePreview = document.querySelector('#doe-preview');
 const doePosterHover = document.querySelector('#doe-poster-hover');
 const doePreviewClose = document.querySelector('#doe-preview-close');
 const doeEnterWorld = document.querySelector('#doe-enter-world');
+const DRIZZLE_FRAME_INDEX = 2;
+const drizzlePortal = document.querySelector('#drizzle-portal');
+const drizzlePlaquePortal = document.querySelector('#drizzle-plaque-portal');
+const drizzlePreview = document.querySelector('#drizzle-preview');
+const drizzleWorld = document.querySelector('#drizzle-world');
+let drizzleOpener;
 const MAGAZINE_FRAME_INDEX = 3;
 const magazinePortal = document.querySelector('#magazine-portal');
 const magazinePlaquePortal = document.querySelector('#magazine-plaque-portal');
@@ -414,12 +405,16 @@ function updateSceneControls() {
   doePortal.hidden = activeScene !== 'museum';
   doePlaquePortal.hidden = activeScene !== 'museum';
   moonlitPortal.hidden = activeScene !== 'museum';
+  drizzlePortal.hidden = activeScene !== 'museum';
+  drizzlePlaquePortal.hidden = activeScene !== 'museum';
   magazinePortal.hidden = activeScene !== 'museum';
   magazinePlaquePortal.hidden = activeScene !== 'museum';
   if (activeScene === 'museum') {
     positionGalleryPortal(doePortal, scene.frames.find(frame => frame.index === 5));
     positionGalleryPortal(doePlaquePortal, scene.plaques.find(plaque => plaque.index === 5));
     positionGalleryPortal(moonlitPortal, scene.frames.find(frame => frame.index === MOONLIT_FRAME_INDEX));
+    positionGalleryPortal(drizzlePortal, scene.frames.find(frame => frame.index === DRIZZLE_FRAME_INDEX));
+    positionGalleryPortal(drizzlePlaquePortal, scene.plaques.find(plaque => plaque.index === DRIZZLE_FRAME_INDEX));
     positionGalleryPortal(magazinePortal, scene.frames.find(frame => frame.index === MAGAZINE_FRAME_INDEX));
     positionGalleryPortal(magazinePlaquePortal, scene.plaques.find(plaque => plaque.index === MAGAZINE_FRAME_INDEX));
   }
@@ -522,6 +517,24 @@ bindArtworkTilt(doePosterHover, doePreview);
 function showMoonlitPreview() {
   if (activeScene === 'museum' && !moonlitPreview.open && !openingDoe) moonlitPreview.showModal();
 }
+
+function showDrizzlePreview() {
+  if (activeScene === 'museum' && !drizzlePreview.open && !openingDoe) drizzlePreview.showModal();
+}
+
+bindArtworkTilt(drizzlePreview.querySelector('.doe-poster-hover'), drizzlePreview);
+for (const portal of [drizzlePortal, drizzlePlaquePortal]) {
+  portal.addEventListener('click', () => {
+    drizzleOpener = portal;
+    approachMuseumFrame(DRIZZLE_FRAME_INDEX, drizzlePreview, showDrizzlePreview);
+  });
+}
+drizzlePreview.querySelector('.doe-preview-close').addEventListener('click', () => drizzlePreview.close());
+drizzlePreview.addEventListener('close', () => {
+  if (!drizzleWorld.open) drizzleOpener?.focus({ preventScroll: true });
+});
+drizzlePlaquePortal.addEventListener('pointermove', handleGalleryHover);
+drizzlePlaquePortal.addEventListener('pointerleave', clearGalleryHover);
 
 function showMagazinePreview() {
   if (!magazineFrame.hasAttribute('src')) magazineFrame.src = 'magazineproject/index.html';
