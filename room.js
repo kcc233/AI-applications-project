@@ -21,6 +21,13 @@ for (let i = sideArtOrder.length - 1; i > 0; i--) {
   [sideArtOrder[i], sideArtOrder[j]] = [sideArtOrder[j], sideArtOrder[i]];
 }
 const caseArtwork = { title: 'Clay AirPods case', file: 'airpods-case.png' };
+const statueArt = new Image();
+const statueReady = new Promise(resolve => {
+  statueArt.onload = resolve;
+  statueArt.onerror = resolve;
+});
+statueArt.src = 'assets/statue/golden-bust.png';
+const statueBounds = { x: 619, y: 153, width: 61, height: 200 };
 // Load local originals once; the room cache keeps movement inexpensive.
 const artworkReady = Promise.all([...artworks, caseArtwork].map(artwork => new Promise(resolve => {
   const image = new Image();
@@ -414,7 +421,7 @@ hangSideRow(left + 18, -44, 164, 104, 1);
 hangSideRow(704, right - 18, 164, 104, 4);
 seed = seedBeforeSideFrames;
 
-// Both sculptures share the same carved marble pedestal.
+// Carved marble pedestal for the AirPod exhibit.
 function drawPedestal(x) {
   ctx.save();
   ctx.translate(x - 620, 0);
@@ -431,7 +438,6 @@ function drawPedestal(x) {
 }
 
 drawPedestal(0);
-drawPedestal(620);
 
 if (caseArtwork.image.complete && caseArtwork.image.naturalWidth > 0) {
   // The original PNG has transparent margins. Position its visible base on the top.
@@ -439,37 +445,11 @@ if (caseArtwork.image.complete && caseArtwork.image.naturalWidth > 0) {
 }
 plaque(29, 270, ['AIRPOD', 'PROTOTYPE'], null, { width: 44, studs: false });
 
-// Classical bust, built from small sculptural facets.
-rect(638,243,29,6,'#7e704a');rect(640,241,25,3,'#ddc58c');
-polygon([[645,230],[644,241],[662,241],[658,229]],'#b4a076');
-rect(643,239,19,2,'#edd7a0');
-polygon([[629,202],[641,195],[642,185],[658,185],[661,194],[677,201],[681,211],[670,224],[659,231],[642,230],[628,220],[623,211]],'#8e805c');
-polygon([[628,202],[642,196],[645,190],[656,190],[660,196],[674,202],[675,212],[664,224],[654,227],[642,224],[629,216],[626,209]],'#d4c298');
-polygon([[642,190],[641,201],[647,207],[656,204],[659,195],[654,188]],'#b5a17a');
-polygon([[646,188],[646,199],[650,202],[654,199],[655,186]],'#ead5a7');
-// Draped fabric's alternating light and shade.
-line([[629,202],[632,214],[643,224],[654,227]],'#f0dfb2',3);
-line([[634,200],[637,212],[647,219],[663,210],[672,201]],'#8f825f',2);
-line([[638,201],[641,211],[649,215],[662,208],[669,200]],'#eee0b9',2);
-line([[628,210],[638,221],[650,225],[665,218],[675,207]],'#a79873',2);
-line([[646,206],[650,210],[657,207]],'#f6e7bc',2);
-line([[629,212],[630,218]],'#857650',2);line([[637,217],[639,225]],'#9d8d65',2);
-// Neck, face in three-quarter profile, brow, nose, lips, and jaw.
-polygon([[638,164],[643,157],[657,157],[665,165],[664,175],[666,178],[662,181],[662,188],[656,194],[649,193],[643,187],[641,179],[637,175]],'#b6a37d');
-polygon([[645,166],[652,162],[661,166],[660,175],[663,178],[658,181],[660,185],[655,190],[650,188],[647,182]],'#dfcda6');
-polygon([[658,168],[660,168],[659,175],[663,178],[658,179],[657,177]],'#f1ddb2');
-line([[653,170],[657,169],[660,170]],'#7c7155',1);
-rect(656,171,2,2,'#6c654d');rect(657,180,4,1,'#8b7b59');
-line([[656,184],[660,183]],'#8b7959',1);line([[652,188],[656,189],[659,187]],'#f4dfb0',1);
-rect(641,173,3,7,'#e4d1a6');rect(642,175,2,3,'#8a7d5c');
-// Curls use stepped pixels rather than smooth circles.
-for(let i=0;i<73;i++){
-  const x=between(634,666),y=between(155,177);
-  if(((x-650)/17)**2+((y-167)/13)**2>1 || (x>648&&y>168))continue;
-  rect(x,y,5,4,'#897d5f');rect(x,y-1,3,3,pick(['#eadab3','#c6b58e','#f4e3bb','#b7a783']));
-  rect(x+1,y,2,1,'#f4e4bb');
+if (statueArt.naturalWidth) {
+  polygon([[629,254],[673,252],[690,266],[690,352],[664,357],[624,351]],'#6a4e2935');
+  const { x, y, width, height } = statueBounds;
+  ctx.drawImage(statueArt, 120, 9, 572, 1909, x, y, width, height);
 }
-line([[635,165],[633,174],[637,183],[640,185]],'#d8c8a0',2);
 
 // Cache the bench separately so it can sit in front of a character behind it.
 const backgroundContext = ctx;
@@ -576,6 +556,6 @@ const observer = new ResizeObserver(() => {
 });
 observer.observe(canvas);
 renderRoom();
-artworkReady.then(() => {
+Promise.all([artworkReady, statueReady]).then(() => {
   if (activeScene === 'museum') renderRoom();
 });

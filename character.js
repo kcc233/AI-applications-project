@@ -292,6 +292,18 @@ canvas.addEventListener('galleryresize', () => {
 });
 
 const doePortal = document.querySelector('#doe-portal');
+const statueExhibit = document.querySelector('#statue-exhibit');
+const statueChat = document.querySelector('#statue-chat');
+const statuePortrait = statueChat.querySelector('.statue-portrait');
+const statueConversation = statueChat.querySelector('.statue-conversation');
+const statueMessage = statueChat.querySelector('#statue-message');
+const statueGreeting = statueMessage.textContent;
+const statueTypedText = statueChat.querySelector('.statue-typed-text');
+const statueUntypedText = statueChat.querySelector('.statue-untyped-text');
+const statueChoices = statueChat.querySelector('.statue-choices');
+let statueSpeech;
+let statueTypingFrame;
+let statueFarewellTimer;
 const doePlaquePortal = document.querySelector('#doe-plaque-portal');
 const doePreview = document.querySelector('#doe-preview');
 const doePosterHover = document.querySelector('#doe-poster-hover');
@@ -403,6 +415,7 @@ function updateSceneControls() {
     });
   }
   doePortal.hidden = activeScene !== 'museum';
+  statueExhibit.hidden = activeScene !== 'museum';
   doePlaquePortal.hidden = activeScene !== 'museum';
   moonlitPortal.hidden = activeScene !== 'museum';
   drizzlePortal.hidden = activeScene !== 'museum';
@@ -410,6 +423,7 @@ function updateSceneControls() {
   magazinePortal.hidden = activeScene !== 'museum';
   magazinePlaquePortal.hidden = activeScene !== 'museum';
   if (activeScene === 'museum') {
+    positionGalleryPortal(statueExhibit, statueBounds);
     positionGalleryPortal(doePortal, scene.frames.find(frame => frame.index === 5));
     positionGalleryPortal(doePlaquePortal, scene.plaques.find(plaque => plaque.index === 5));
     positionGalleryPortal(moonlitPortal, scene.frames.find(frame => frame.index === MOONLIT_FRAME_INDEX));
@@ -756,5 +770,106 @@ doeSketchPreview.addEventListener('close', () => {
   activeSketchButton?.focus({ preventScroll: true });
   activeSketchButton = null;
 });
+function typeStatueMessage(message, onComplete, pauseAfter) {
+  cancelAnimationFrame(statueTypingFrame);
+  statueSpeech?.cancel();
+  statueMessage.textContent = message;
+  const animate = !reducedMotion.matches;
+  statueTypedText.textContent = animate ? '' : message;
+  statueUntypedText.textContent = animate ? message : '';
+  if (!animate) {
+    onComplete?.();
+    return;
+  }
+
+  pauseAfter ??= Array.from(
+    message.matchAll(/[.!?][”’"']*(?=\s+\S)/gu),
+    match => match.index + match[0].length
+  );
+  const duration = Math.max(900, 1350 * message.length / statueGreeting.length);
+  const iterations = Math.round(duration / 450);
+  const frames = ['7.11%', '34.77%', '62.5%', '90.22%', '7.11%'];
+  const start = performance.now();
+  const pauseDuration = 250;
+  let speechPaused = false;
+  statueSpeech = statuePortrait.animate(
+    frames.map(backgroundPositionX => ({ backgroundPositionX })),
+    { duration: duration / iterations, iterations, easing: 'steps(4, end)' }
+  );
+
+  function typeFrame(now) {
+    if (!statueChat.open) return;
+
+    let elapsed = now - start;
+    let pausedAt;
+    for (const stop of pauseAfter) {
+      const pauseStart = duration * stop / message.length;
+      if (elapsed < pauseStart) break;
+      if (elapsed < pauseStart + pauseDuration) {
+        pausedAt = stop;
+        break;
+      }
+      elapsed -= pauseDuration;
+    }
+
+    const pauseSpeech = pausedAt !== undefined;
+    if (pauseSpeech !== speechPaused) {
+      if (pauseSpeech) statueSpeech.pause();
+      else statueSpeech.play();
+      speechPaused = pauseSpeech;
+    }
+    const progress = Math.min(1, Math.max(0, elapsed / duration));
+    const count = pausedAt ?? Math.floor(progress * message.length);
+    statueTypedText.textContent = message.slice(0, count);
+    statueUntypedText.textContent = message.slice(count);
+
+    if (progress < 1) statueTypingFrame = requestAnimationFrame(typeFrame);
+    else onComplete?.();
+  }
+
+  statueTypingFrame = requestAnimationFrame(typeFrame);
+}
+
+function showStatueChat() {
+  if (activeScene !== 'museum' || statueChat.open) return;
+
+  clearTimeout(statueFarewellTimer);
+  statueChoices.inert = true;
+  const greetingPauses = ['Hey!'.length, 'Hey! are you lost?'.length];
+  typeStatueMessage(statueGreeting, () => { statueChoices.inert = false; }, greetingPauses);
+  statueChat.showModal();
+  statueConversation.scrollTop = 0;
+}
+
+statueChoices.addEventListener('click', event => {
+  const choice = event.target.closest('button[data-reply]');
+  if (!choice || !statueChat.open || statueChoices.inert) return;
+
+  const farewell = choice.hasAttribute('data-farewell');
+  if (farewell) {
+    statueChat.querySelector('.statue-chat-close').focus({ preventScroll: true });
+    statueChoices.inert = true;
+  }
+
+  typeStatueMessage(choice.dataset.reply, () => {
+    if (farewell) statueFarewellTimer = setTimeout(() => statueChat.close(), 3200);
+  });
+  statueConversation.scrollTop = 0;
+});
+
+statueChat.addEventListener('close', () => {
+  if (statueChat.open) return;
+  clearTimeout(statueFarewellTimer);
+  cancelAnimationFrame(statueTypingFrame);
+  statueSpeech?.cancel();
+});
+
+statueExhibit.addEventListener('click', () => {
+  if (activeScene !== 'museum' || openingDoe || statueChat.open ||
+    exhibitWalk?.onArrival === showStatueChat) return;
+  canvas.focus({ preventScroll: true });
+  moveTo({ x: statueBounds.x + statueBounds.width / 2, y: floorTop() + 30 }, showStatueChat);
+});
+
 updateSceneControls();
 paintScene();

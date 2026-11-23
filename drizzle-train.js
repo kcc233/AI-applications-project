@@ -167,13 +167,97 @@
     paintRider();
   }).observe(drizzleWorld);
 
-  document.querySelector('#drizzle-enter-world').addEventListener('click', () => {
-    if (drizzleWorld.open) return;
+  const enterWorld = document.querySelector('#drizzle-enter-world');
+  const transitionFrameDuration = 1000 / 24;
+  const fullyCoveredFrame = 7;
+  let transitionFrames;
+  let enteringWorld = false;
+
+  function loadTransitionFrames() {
+    transitionFrames ??= Promise.all(Array.from({ length: 20 }, (_, index) => {
+      const image = new Image();
+      const number = String(index + 1).padStart(2, '0');
+      image.src = `assets/drizzle/transition/frame-${number}.png`;
+      return image.decode().then(() => image);
+    })).catch(() => null);
+    return transitionFrames;
+  }
+
+  function showTrain() {
     Object.assign(rider, spawn);
     drizzleWorld.showModal();
     drizzlePreview.close();
-    train.focus({ preventScroll: true });
     paintRider();
+  }
+
+  drizzlePreview.addEventListener('focusin', () => {
+    if (!reducedMotion.matches) loadTransitionFrames();
+  });
+
+  for (const dialog of [drizzlePreview, drizzleWorld]) {
+    dialog.addEventListener('cancel', event => {
+      if (enteringWorld) event.preventDefault();
+    });
+  }
+
+  enterWorld.addEventListener('click', async () => {
+    if (enteringWorld || drizzleWorld.open || !drizzlePreview.open) return;
+    enteringWorld = true;
+    const wipe = document.createElement('canvas');
+
+    try {
+      const frames = reducedMotion.matches ? null : await loadTransitionFrames();
+      if (!drizzlePreview.open) return;
+      const context = frames && wipe.getContext('2d');
+      if (!context) {
+        showTrain();
+        return;
+      }
+
+      wipe.className = 'drizzle-train-transition';
+      wipe.setAttribute('aria-hidden', 'true');
+      wipe.width = frames[0].naturalWidth;
+      wipe.height = frames[0].naturalHeight;
+      drizzlePreview.append(wipe);
+      drizzlePreview.inert = true;
+
+      await new Promise(resolve => {
+        let index = 0;
+        let nextFrameAt;
+
+        function drawFrame(now) {
+          nextFrameAt ??= now;
+          if (now >= nextFrameAt) {
+            if (index === frames.length) {
+              resolve();
+              return;
+            }
+
+            context.clearRect(0, 0, wipe.width, wipe.height);
+            context.drawImage(frames[index], 0, 0);
+
+            // Swap scenes under the fully opaque train so its tail reveals the interior.
+            if (index === fullyCoveredFrame) {
+              drizzleWorld.append(wipe);
+              showTrain();
+              drizzleWorld.inert = true;
+            }
+
+            index += 1;
+            nextFrameAt = Math.max(nextFrameAt + transitionFrameDuration, now);
+          }
+          requestAnimationFrame(drawFrame);
+        }
+
+        requestAnimationFrame(drawFrame);
+      });
+    } finally {
+      wipe.remove();
+      drizzlePreview.inert = false;
+      drizzleWorld.inert = false;
+      enteringWorld = false;
+      if (drizzleWorld.open) train.focus({ preventScroll: true });
+    }
   });
   drizzleWorld.querySelector('.back-button').addEventListener('click', () => drizzleWorld.close());
   openPhone.addEventListener('click', () => {
