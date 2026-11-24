@@ -1,0 +1,345 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  --spacing: clamp(4px, 1dvh, 10px);
+  margin: 0;
+  height: 100dvh;
+  padding: clamp(8px, 3dvh, 32px) clamp(8px, 3vw, 30px);
+  display: grid;
+  grid-template-columns: minmax(0, min(570px, 82dvh)) minmax(105px, 200px);
+  grid-template-rows: minmax(0, 1fr);
+  gap: clamp(8px, 3vw, 32px);
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+
+.arcade-machine {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--spacing);
+  border: clamp(4px, 1vw, 9px) solid #ffd900;
+  border-radius: 32px;
+  background-color: rgb(0, 0, 0);
+  box-shadow: 0 0 10px #ffe34f,
+  0 0 20px #ffe34f,
+  0 0 30px #ff9900,
+  0 0 35px #ff3c00;
+}
+
+
+.arcade-header {
+  padding: var(--spacing);
+  border-radius: 20px 20px 8px 8px;
+  background-color: red;
+}
+
+
+.insert-coin {
+  margin: 0 0 calc(var(--spacing) / 2);
+  color: #fff56d;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(.625rem, 2dvh, .9rem);
+  font-weight: 700;
+  letter-spacing: 4px;
+}
+
+
+h1 {
+  margin: 0;
+  color: #ffe34f;
+  font-family: "Modak", system-ui;
+  font-size: clamp(1.125rem, min(6.4vw, 6dvh), 3rem);
+  line-height: 1.1;
+  -webkit-text-stroke: clamp(1px, .4vw, 4px) rgb(66, 29, 29);
+  text-shadow:
+  0 0 10px #ffe34f,
+  0 0 20px #ffe34f,
+  0 0 30px #ff9900,
+  0 0 35px #ff3c00;
+  
+}
+
+
+
+h2 {
+  margin: calc(var(--spacing) / 2) 0 0;
+  color: white;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(.625rem, 2.3dvh, 1rem);
+}
+
+
+.control-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing);
+  padding: var(--spacing);
+  border: 5px solid #111;
+  border-radius: 14px;
+}
+
+
+.score-card {
+  padding: 5px;
+  border: 3px solid #505063;
+  border-radius: 8px;
+  background: #2b0d0d;
+}
+
+
+.score-card p {
+  margin: 0;
+  color: #d7d7e0;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(.625rem, 2dvh, .8rem);
+  letter-spacing: 1px;
+
+}
+
+
+#score, #best, #timer{
+  color: #ff1515;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(1rem, min(5vw, 4.8dvh), 2.5rem);
+  line-height: 1.1;
+  font-weight: 400;
+  text-shadow:
+    0 0 12px rgba(247, 0, 0, 0.7);
+}
+
+
+
+#startButton {
+  padding: calc(var(--spacing) / 2) 20px;
+  border: 4px solid #6e1009;
+  border-radius: 50px;
+  color: white;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(.625rem, 2.8dvh, 1rem);
+  font-weight: 800;
+  letter-spacing: 1px;
+  background-color: red;
+  box-shadow: #791109;
+  grid-column: 1 / -1;
+  justify-self: center;
+  cursor: pointer;
+
+}
+
+
+#startButton:hover {
+  filter: brightness(1.2);
+}
+
+
+
+.game-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--spacing);
+  border: 7px solid #111;
+  border-radius: 15px;
+  background: #292934;
+}
+
+
+.screen-top {
+  padding-bottom: calc(var(--spacing) / 2);
+  color: #73faff;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(.625rem, 2.3dvh, 1rem);
+  letter-spacing: 1px;
+}
+
+
+.playfield {
+  flex: 1;
+  min-height: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+
+#gameArea {
+  position: relative;
+  container-type: size;
+  width: min(100cqw, 510px, calc(100cqh * 510 / 310));
+  aspect-ratio: 510 / 310;
+  border: 5px solid #080808;
+  border-radius: 8px;
+  background-color: #3d9f38;
+  background-image: url("green-grass-vector-seamless-texture-lawn-nature-meadow-plant-field-natural-outdoor-illustration_1284-47056.avif");
+  box-shadow:
+    0 0 20px rgba(134, 251, 255, 0.35);
+}                  
+
+#box {
+  position: absolute;
+  display: none;
+  width: min(100px, 32%, 75cqh);
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+#box img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+
+#box:active img {
+  transform: scale(0.82);
+}
+
+
+#message {
+  margin: 0;
+  padding: calc(var(--spacing) / 2);
+  color: #fff56d;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(.75rem, min(3vw, 2.8dvh), 1.375rem);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 #5e1a6f;
+}
+
+
+.instructions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(var(--spacing) / 2);
+}
+
+
+.instructions p {
+  margin: 0;
+  padding: calc(var(--spacing) / 3) clamp(4px, 1vw, 12px);
+  border: 2px solid #111;
+  border-radius: 20px;
+  color: #17101e;
+  background: #ffd943;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(.625rem, min(2vw, 2.1dvh), 1rem);
+  font-weight: 800;
+}
+
+.coin-slot {
+  width: 90px;
+  margin: calc(var(--spacing) / 2) auto 0;
+  padding: calc(var(--spacing) / 3);
+  border: 4px solid #111;
+  border-radius: 8px;
+  background-color: #5c5c5c;
+}
+
+.coin-opening {
+  width: 40px;
+  height: 8px;
+  margin: auto;
+  border: 2px solid #000000;
+  border-radius: 4px;
+  background: #000000;
+}
+
+.coin-slot p {
+  margin: 2px 0 0;
+  color: white;
+  font-family: "Bitcount Grid Single", monospace;
+  font-size: clamp(.625rem, 2.3dvh, 1rem);
+}
+
+
+.joke-mole {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+}
+
+#jokeBox {
+  padding: var(--spacing);
+  border: 3px solid #595959;
+  border-radius: 20px;
+  color: #111;
+  background-color: white;
+  font-size: clamp(.75rem, 2.6dvh, 1rem);
+  overflow-wrap: anywhere;
+}
+
+.joke-title {
+  margin: 0 0 calc(var(--spacing) / 2);
+  color: #3da505;
+  font-family: "Bitcount Grid Single", monospace;
+  font-weight: bold;
+}
+
+#jokeText {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+#molepic {
+  position: relative;
+  width: min(100%, 25dvh);
+  aspect-ratio: 5 / 4;
+  justify-self: center;
+  overflow: hidden;
+}
+
+#molepic img {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: block;
+  width: 100%;
+  transform: translateY(-50%);
+  animation: mole-float 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes mole-float {
+  from { translate: 0 4px; }
+  to { translate: 0 -6px; }
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+  body {
+    grid-template-columns: minmax(0, 480px);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .joke-mole {
+    grid-template-columns: minmax(0, 1fr) minmax(76px, 30%);
+  }
+}
+
+@media (max-height: 400px) and (orientation: landscape) {
+  .control-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  }
+
+  #startButton {
+    grid-column: auto;
+    align-self: center;
+    padding-inline: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #molepic img { animation: none; }
+}

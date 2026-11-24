@@ -38,6 +38,10 @@
       <button id="doe-portal" class="artwork-portal" type="button" aria-label="View the DOE poster" aria-haspopup="dialog"></button>
       <button id="doe-plaque-portal" class="artwork-portal" type="button" aria-label="DOE plaque: view the DOE poster" aria-haspopup="dialog"></button>
       <button id="moonlit-portal" class="artwork-portal" type="button" aria-label="View Moonlit Dragon and Castle" aria-haspopup="dialog" hidden></button>
+      <button id="whack-portal" class="artwork-portal" type="button" aria-label="Play Whack-a-Mole" aria-haspopup="dialog" hidden></button>
+      <button id="whack-plaque-portal" class="artwork-portal" type="button" aria-label="Whack-a-Mole plaque, open the game" aria-haspopup="dialog" hidden></button>
+      <button id="puma-portal" class="artwork-portal" type="button" aria-label="View the Puma Dunk poster" aria-haspopup="dialog" hidden></button>
+      <button id="puma-plaque-portal" class="artwork-portal" type="button" aria-label="Puma Dunk plaque, view the poster" aria-haspopup="dialog" hidden></button>
       <button id="drizzle-portal" class="artwork-portal" type="button" aria-label="View Drizzle App" aria-haspopup="dialog" hidden></button>
       <button id="drizzle-plaque-portal" class="artwork-portal" type="button" aria-label="Drizzle App plaque, view the app preview" aria-haspopup="dialog" hidden></button>
       <button id="magazine-portal" class="artwork-portal" type="button" aria-label="Open SlopeStyle, the HTML CSS Project" aria-haspopup="dialog" hidden></button>
@@ -50,7 +54,7 @@
       </button>
       <button id="doe-hologram" class="doe-hologram" type="button" aria-label="Walk to the DOE assembly hologram" aria-haspopup="dialog" hidden></button>
       <p id="scene-status" class="scene-status" role="status" hidden></p>
-      <p id="controls" class="sr-only">Click or tap the floor to walk. You can also use the arrow keys or W, A, S, and D. Select the DOE, Moonlit Dragon, or Drizzle App frame to open its preview, the HTML CSS Project to open SlopeStyle, or the AirPod Prototype to read its project book. Select the golden Greek statue to talk to it. Use Back to museum or Escape to return from an exhibit.</p>
+      <p id="controls" class="sr-only">Click or tap the floor to walk. You can also use the arrow keys or W, A, S, and D. Select the DOE, Moonlit Dragon, Puma Dunk, or Drizzle App frame to open its preview. Select Whack-a-Mole to play the game, the HTML CSS Project to open SlopeStyle, or the AirPod Prototype to read its project book. Select the golden Greek statue to talk to it. Use Back to museum or Escape to return from an exhibit.</p>
     </main>
     <div id="doe-smoke" class="doe-smoke" aria-hidden="true" hidden>
     </div>
@@ -93,6 +97,14 @@
       <button id="moonlit-enter-world" class="doe-enter-world" type="button" aria-label="Enter Moonlit Castle world" aria-haspopup="dialog">
         <img src="assets/moonlit/enter-world.png" width="2172" height="724" alt="">
       </button>
+    </dialog>
+    <dialog id="puma-preview" class="doe-preview puma-preview" aria-label="Puma Dunk poster preview">
+      <form method="dialog">
+        <button class="doe-preview-close" type="submit" aria-label="Close Puma Dunk preview" autofocus><span aria-hidden="true"></span></button>
+      </form>
+      <div class="doe-poster-hover">
+        <img class="doe-preview-poster" src="assets/artworks/puma-dunk-poster.png" width="1920" height="1080" alt="Puma Dunk poster with a basketball player mid-dunk and the words Forever. Faster.">
+      </div>
     </dialog>
     <dialog id="drizzle-preview" class="doe-preview drizzle-preview" aria-label="Drizzle App preview">
       <button class="doe-preview-close" type="button" aria-label="Close Drizzle App preview" autofocus><span aria-hidden="true"></span></button>
@@ -167,6 +179,10 @@
           </section>
         </div>
       </div>
+    </dialog>
+    <dialog id="whack-preview" class="doe-preview whack-preview" aria-label="Whack-a-Mole game">
+      <button class="doe-preview-close" type="button" aria-label="Close Whack-a-Mole" autofocus><span aria-hidden="true"></span></button>
+      <iframe title="Play Whack-a-Mole"></iframe>
     </dialog>
     <dialog id="magazine-preview" class="doe-preview magazine-preview" aria-label="SlopeStyle magazine">
       <button class="doe-preview-close" type="button" aria-label="Close SlopeStyle" autofocus><span aria-hidden="true"></span></button>

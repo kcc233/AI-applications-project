@@ -309,6 +309,17 @@ const doePreview = document.querySelector('#doe-preview');
 const doePosterHover = document.querySelector('#doe-poster-hover');
 const doePreviewClose = document.querySelector('#doe-preview-close');
 const doeEnterWorld = document.querySelector('#doe-enter-world');
+const WHACK_FRAME_INDEX = 0;
+const whackPortal = document.querySelector('#whack-portal');
+const whackPlaquePortal = document.querySelector('#whack-plaque-portal');
+const whackPreview = document.querySelector('#whack-preview');
+const whackFrame = whackPreview.querySelector('iframe');
+let whackOpener;
+const PUMA_FRAME_INDEX = 1;
+const pumaPortal = document.querySelector('#puma-portal');
+const pumaPlaquePortal = document.querySelector('#puma-plaque-portal');
+const pumaPreview = document.querySelector('#puma-preview');
+let pumaOpener;
 const DRIZZLE_FRAME_INDEX = 2;
 const drizzlePortal = document.querySelector('#drizzle-portal');
 const drizzlePlaquePortal = document.querySelector('#drizzle-plaque-portal');
@@ -418,6 +429,10 @@ function updateSceneControls() {
   statueExhibit.hidden = activeScene !== 'museum';
   doePlaquePortal.hidden = activeScene !== 'museum';
   moonlitPortal.hidden = activeScene !== 'museum';
+  whackPortal.hidden = activeScene !== 'museum';
+  whackPlaquePortal.hidden = activeScene !== 'museum';
+  pumaPortal.hidden = activeScene !== 'museum';
+  pumaPlaquePortal.hidden = activeScene !== 'museum';
   drizzlePortal.hidden = activeScene !== 'museum';
   drizzlePlaquePortal.hidden = activeScene !== 'museum';
   magazinePortal.hidden = activeScene !== 'museum';
@@ -427,6 +442,10 @@ function updateSceneControls() {
     positionGalleryPortal(doePortal, scene.frames.find(frame => frame.index === 5));
     positionGalleryPortal(doePlaquePortal, scene.plaques.find(plaque => plaque.index === 5));
     positionGalleryPortal(moonlitPortal, scene.frames.find(frame => frame.index === MOONLIT_FRAME_INDEX));
+    positionGalleryPortal(whackPortal, scene.frames.find(frame => frame.index === WHACK_FRAME_INDEX));
+    positionGalleryPortal(whackPlaquePortal, scene.plaques.find(plaque => plaque.index === WHACK_FRAME_INDEX));
+    positionGalleryPortal(pumaPortal, scene.frames.find(frame => frame.index === PUMA_FRAME_INDEX));
+    positionGalleryPortal(pumaPlaquePortal, scene.plaques.find(plaque => plaque.index === PUMA_FRAME_INDEX));
     positionGalleryPortal(drizzlePortal, scene.frames.find(frame => frame.index === DRIZZLE_FRAME_INDEX));
     positionGalleryPortal(drizzlePlaquePortal, scene.plaques.find(plaque => plaque.index === DRIZZLE_FRAME_INDEX));
     positionGalleryPortal(magazinePortal, scene.frames.find(frame => frame.index === MAGAZINE_FRAME_INDEX));
@@ -532,6 +551,21 @@ function showMoonlitPreview() {
   if (activeScene === 'museum' && !moonlitPreview.open && !openingDoe) moonlitPreview.showModal();
 }
 
+function showPumaPreview() {
+  pumaPreview.showModal();
+}
+
+bindArtworkTilt(pumaPreview.querySelector('.doe-poster-hover'), pumaPreview);
+for (const portal of [pumaPortal, pumaPlaquePortal]) {
+  portal.addEventListener('click', () => {
+    pumaOpener = portal;
+    approachMuseumFrame(PUMA_FRAME_INDEX, pumaPreview, showPumaPreview);
+  });
+}
+pumaPreview.addEventListener('close', () => pumaOpener?.focus({ preventScroll: true }));
+pumaPlaquePortal.addEventListener('pointermove', handleGalleryHover);
+pumaPlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+
 function showDrizzlePreview() {
   if (activeScene === 'museum' && !drizzlePreview.open && !openingDoe) drizzlePreview.showModal();
 }
@@ -549,6 +583,33 @@ drizzlePreview.addEventListener('close', () => {
 });
 drizzlePlaquePortal.addEventListener('pointermove', handleGalleryHover);
 drizzlePlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+
+function showWhackPreview() {
+  whackFrame.src = 'whack-a-mole/index.html';
+  whackPreview.showModal();
+}
+
+for (const portal of [whackPortal, whackPlaquePortal]) {
+  portal.addEventListener('click', () => {
+    whackOpener = portal;
+    approachMuseumFrame(WHACK_FRAME_INDEX, whackPreview, showWhackPreview);
+  });
+}
+whackPlaquePortal.addEventListener('pointermove', handleGalleryHover);
+whackPlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+whackPreview.querySelector('.doe-preview-close').addEventListener('click', () => whackPreview.close());
+whackPreview.addEventListener('close', () => {
+  whackFrame.removeAttribute('src');
+  whackOpener?.focus({ preventScroll: true });
+});
+whackFrame.addEventListener('load', () => {
+  if (!whackFrame.hasAttribute('src')) return;
+  whackFrame.contentDocument?.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !whackPreview.open) return;
+    event.preventDefault();
+    whackPreview.close();
+  });
+});
 
 function showMagazinePreview() {
   if (!magazineFrame.hasAttribute('src')) magazineFrame.src = 'magazineproject/index.html';

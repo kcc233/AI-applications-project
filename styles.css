@@ -404,23 +404,52 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
 .doe-enter-world:hover { filter: brightness(1.2); }
 .doe-preview button:focus-visible { outline: 2px solid #ceff7a; outline-offset: 2px; }
 
-.moonlit-preview {
-  --moonlit-button-width: clamp(120px, 34dvh, 300px);
-  width: min(calc(100vw - 32px), 1050px, calc((100dvh - 58px - var(--moonlit-button-width) / 3) * 16 / 9));
+#doe-preview,
+.moonlit-preview,
+.puma-preview,
+.drizzle-preview {
+  --preview-button-width: min(calc(100vw - 32px), 24dvh, 340px);
+  width: min(calc(100vw - 32px), var(--poster-width), calc((100dvh - 60px - var(--preview-button-width) / 3) * var(--poster-ratio)));
+}
+#doe-preview {
+  --poster-width: 1296px;
+  --poster-ratio: 3 / 4;
+}
+.moonlit-preview,
+.puma-preview {
+  --poster-width: 1920px;
+  --poster-ratio: 16 / 9;
+}
+.puma-preview { --preview-button-width: 0px; }
+.drizzle-preview {
+  --poster-width: 560px;
+  --poster-ratio: 398 / 858;
 }
 .moonlit-preview::backdrop,
+.puma-preview::backdrop,
 .drizzle-preview::backdrop,
+.whack-preview::backdrop,
 .magazine-preview::backdrop { background: #080f1ae0; }
-.moonlit-preview .doe-enter-world { width: min(100%, var(--moonlit-button-width)); }
+#doe-preview .doe-enter-world,
+.moonlit-preview .doe-enter-world,
+.drizzle-preview .doe-enter-world { width: min(100%, var(--preview-button-width)); }
 .moonlit-preview button:focus-visible,
+.puma-preview button:focus-visible,
 .drizzle-preview button:focus-visible,
+.whack-preview button:focus-visible,
 .magazine-preview button:focus-visible { outline-color: #7ddbff; }
-.drizzle-preview { width: min(calc(100vw - 32px), 360px, calc((100dvh - 58px) * .4)); }
-.magazine-preview { width: min(calc(100vw - 32px), 1440px); }
+.whack-preview { width: min(calc(100vw - 32px), calc(min(570px, 82dvh) + 250px)); }
+.whack-preview iframe {
+  display: block;
+  width: 100%;
+  height: calc(100dvh - 54px);
+  border: 0;
+}
+.magazine-preview { width: min(calc(100vw - 32px), max(1440px, 80vw)); }
 .magazine-preview iframe {
   display: block;
   width: 100%;
-  height: min(820px, 83dvh, calc(100dvh - 54px));
+  height: min(92dvh, calc(100dvh - 54px));
   border: 0;
   background: #fff;
 }
