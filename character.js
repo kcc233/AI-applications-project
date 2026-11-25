@@ -20,6 +20,9 @@ const obstacles = [
 ];
 let route = [];
 let exhibitWalk = null;
+let arcadeLift = null;
+let arcadeLiftAssets = null;
+let arcadeLiftLoading;
 let animationFrame = 0;
 let lastTime = 0;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -110,7 +113,7 @@ function drawPlayer(painter) {
     return;
   }
   painter.save();
-  painter.translate(Math.round(player.x), Math.round(player.y));
+  painter.translate(Math.round(player.x), Math.round(player.y + arcadeRiderOffset()));
   const shadowScale = MUSEUM_VISITOR_HEIGHT * perspective / 96;
   painter.fillStyle = '#3b2b1a45';
   painter.fillRect(-18 * shadowScale, -2, 36 * shadowScale, 4);
@@ -173,6 +176,7 @@ function paintScene(time = performance.now()) {
   if (scene.bench) {
     const foreground = museumForeground.getContext('2d');
     foreground.clearRect(0, 0, museumForeground.width, museumForeground.height);
+    drawArcadeLift(foreground);
     if (player.y < 430) paintAvatar(foreground);
     foreground.drawImage(scene.bench, 0, 0);
     if (player.y >= 430) paintAvatar(foreground);
@@ -205,9 +209,11 @@ function animate(time) {
 }
 
 function moveTo(destination, onArrival = null) {
+  if (arcadeLift) return;
   route = findRoute(destination);
   exhibitWalk = onArrival && route.length ? { destination, onArrival, sceneName: activeScene } : null;
   if (!animationFrame && route.length) animationFrame = requestAnimationFrame(animate);
+  if (!route.length && onArrival && distance(player, floorPoint(destination)) < 1) onArrival();
 }
 
 function approachDoeExhibit() {
@@ -219,7 +225,7 @@ function approachMoonlitExhibit() {
 }
 
 function approachMuseumFrame(index, preview, onArrival) {
-  if (activeScene !== 'museum' || openingDoe || preview.open || exhibitWalk?.onArrival === onArrival) return;
+  if (activeScene !== 'museum' || arcadeLift || openingDoe || preview.open || exhibitWalk?.onArrival === onArrival) return;
   const frame = scene.frames.find(frame => frame.index === index);
   if (!frame) return;
   canvas.focus({ preventScroll: true });
@@ -584,10 +590,104 @@ drizzlePreview.addEventListener('close', () => {
 drizzlePlaquePortal.addEventListener('pointermove', handleGalleryHover);
 drizzlePlaquePortal.addEventListener('pointerleave', clearGalleryHover);
 
-function showWhackPreview() {
-  whackFrame.src = 'whack-a-mole/index.html';
-  whackPreview.showModal();
+function loadArcadeLift() {
+  arcadeLiftLoading ??= (async () => {
+    const response = await fetch('assets/arcade-lift/frame-positions.json');
+    if (!response.ok) throw new Error('Could not load arcade lift positions');
+    const positions = await response.json();
+    const images = await Promise.all(positions.frames.map(async frame => {
+      const image = new Image();
+      image.src = `assets/arcade-lift/frames/${frame.filename}`;
+      await image.decode();
+      return image;
+    }));
+    arcadeLiftAssets = { ...positions, images };
+    if (activeScene === 'museum') paintScene();
+    return arcadeLiftAssets;
+  })().catch(error => {
+    arcadeLiftLoading = null;
+    throw error;
+  });
+  return arcadeLiftLoading;
 }
+
+// The supplied coordinates keep the visitor's feet on the carpet in every frame.
+const ARCADE_LIFT_SCALE = .5;
+function arcadeRiderOffset() {
+  if (!arcadeLiftAssets || !arcadeLift || activeScene !== 'museum') return 0;
+  const frames = arcadeLiftAssets.frames;
+  return (frames[arcadeLift.frame].riderFeetY - frames[0].riderFeetY) * ARCADE_LIFT_SCALE;
+}
+
+function drawArcadeLift(painter) {
+  if (activeScene !== 'museum' || !arcadeLiftAssets) return;
+  const frame = arcadeLift?.frame ?? 0;
+  const { width, height, frames, images } = arcadeLiftAssets;
+  const cabinet = scene.frames.find(frame => frame.index === WHACK_FRAME_INDEX);
+  if (!cabinet) return;
+  const x = cabinet.x + cabinet.width / 2;
+  const y = floorTop() + 8;
+  painter.save();
+  painter.imageSmoothingEnabled = false;
+  painter.translate(-scene.left, -scene.top);
+  painter.drawImage(images[frame],
+    x - frames[frame].riderFeetX * ARCADE_LIFT_SCALE,
+    y - frames[0].riderFeetY * ARCADE_LIFT_SCALE,
+    width * ARCADE_LIFT_SCALE, height * ARCADE_LIFT_SCALE);
+  painter.restore();
+}
+
+function animateArcadeLift(ascending) {
+  const state = arcadeLift;
+  state.phase = ascending ? 'up' : 'down';
+  const lastFrame = arcadeLiftAssets.frames.length - 1;
+  return new Promise(resolve => {
+    let started;
+    function step(now) {
+      started ??= now;
+      const elapsedFrame = reducedMotion.matches ? lastFrame
+        : Math.min(lastFrame, Math.floor((now - started) / arcadeLiftAssets.frameDurationMs));
+      state.frame = ascending ? elapsedFrame : lastFrame - elapsedFrame;
+      paintScene();
+      if (elapsedFrame === lastFrame) resolve();
+      else requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+function releaseArcadeLift() {
+  arcadeLift = null;
+  const museum = document.querySelector('.gallery');
+  museum.inert = false;
+  museum.classList.remove('is-arcade-riding');
+  canvas.removeAttribute('aria-busy');
+  paintScene();
+  canvas.focus({ preventScroll: true });
+}
+
+async function showWhackPreview() {
+  if (arcadeLift || whackPreview.open || activeScene !== 'museum') return;
+  arcadeLift = { frame: 0, phase: 'loading' };
+  const museum = document.querySelector('.gallery');
+  museum.inert = true;
+  museum.classList.add('is-arcade-riding');
+  canvas.setAttribute('aria-busy', 'true');
+  player.back = true;
+  try {
+    await loadArcadeLift();
+    await animateArcadeLift(true);
+    arcadeLift.phase = 'playing';
+    whackFrame.src = 'whack-a-mole/index.html';
+    whackPreview.showModal();
+  } catch (error) {
+    console.error('Could not start arcade lift', error);
+    releaseArcadeLift();
+  }
+}
+
+// Show the resting carpet before the visitor selects the arcade.
+loadArcadeLift().catch(error => console.error('Could not preload arcade lift', error));
 
 for (const portal of [whackPortal, whackPlaquePortal]) {
   portal.addEventListener('click', () => {
@@ -598,9 +698,15 @@ for (const portal of [whackPortal, whackPlaquePortal]) {
 whackPlaquePortal.addEventListener('pointermove', handleGalleryHover);
 whackPlaquePortal.addEventListener('pointerleave', clearGalleryHover);
 whackPreview.querySelector('.doe-preview-close').addEventListener('click', () => whackPreview.close());
-whackPreview.addEventListener('close', () => {
+whackPreview.addEventListener('close', async () => {
   whackFrame.removeAttribute('src');
-  whackOpener?.focus({ preventScroll: true });
+  if (arcadeLift?.phase === 'playing') {
+    try {
+      await animateArcadeLift(false);
+    } finally {
+      releaseArcadeLift();
+    }
+  } else if (!arcadeLift) whackOpener?.focus({ preventScroll: true });
 });
 whackFrame.addEventListener('load', () => {
   if (!whackFrame.hasAttribute('src')) return;

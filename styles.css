@@ -8,9 +8,26 @@ canvas { cursor: crosshair; touch-action: none; }
 canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
 #plaque-labels, #museum-foreground { position: absolute; inset: 0; pointer-events: none; }
 #plaque-labels { image-rendering: auto; }
+.gallery.is-arcade-riding #museum-foreground { z-index: 1; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .artwork-portal { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .artwork-portal:focus-visible { outline: 3px solid #ffe092; outline-offset: 4px; }
+#whack-portal {
+  overflow: hidden;
+  background-image: url("assets/artworks/whack-arcade-sprites.png");
+  background-size: 400% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  animation: whack-arcade-blink 1.6s steps(4, end) infinite;
+}
+@keyframes whack-arcade-blink {
+  /* A full cycle moves four cells across the four-frame sheet. */
+  from { background-position: 0% 0; }
+  to { background-position: 133.333333% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #whack-portal { animation: none; }
+}
 .back-button { position: absolute; top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); padding: 10px 13px; border: 2px solid #9aa25e; background: #161c15e8; color: #e7edc3; box-shadow: 3px 3px 0 #060a07; font: bold 14px monospace; cursor: pointer; }
 .back-button:hover { background: #303b23; border-color: #c7e86a; }
 .back-button:focus-visible { outline: 3px solid #d4ff73; outline-offset: 3px; }
@@ -505,7 +522,18 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   filter: brightness(1.15) drop-shadow(0 0 5px #34efff) drop-shadow(0 0 12px #08b9ffbb);
 }
 .drizzle-phone {
-  width: min(calc(100vw - 24px), 410px, calc((100dvh - 56px) * 920 / 1708));
+  --phone-width: min(calc(100vw - 24px), 410px, calc((100dvh - 56px) * 920 / 1708));
+  --landscape-width: min(calc(100vw - 24px), 1200px, calc((100dvh - 56px) * 1708 / 920));
+  width: var(--phone-width);
+  height: calc(var(--phone-width) * 1708 / 920 + 38px);
+}
+.drizzle-phone.is-research {
+  width: var(--landscape-width);
+  height: calc(var(--landscape-width) * 920 / 1708 + 38px);
+}
+.drizzle-phone.is-research .drizzle-phone-handset {
+  width: calc(var(--landscape-width) * 920 / 1708);
+  transform: translate(-50%, -50%) rotate(-90deg);
 }
 .drizzle-phone::backdrop { background: #071228b8; }
 .drizzle-phone .doe-preview-close {
@@ -516,7 +544,11 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
 .drizzle-phone-handset {
   --lock-art: url("assets/drizzle/phone-lock.png");
   --screen-shape: inset(2.7% 8.8% 3.3% 10.1% round 14% / 7%);
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 19px);
+  width: var(--phone-width);
+  transform: translate(-50%, -50%) rotate(0deg);
   isolation: isolate;
 }
 .drizzle-phone-home {
@@ -586,7 +618,15 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   inset: 2.7% 8.8% 3.3% 10.1%;
   pointer-events: auto;
 }
-.drizzle-research { background: #f4f4f4; }
+.drizzle-research {
+  inset: auto;
+  left: 50.65%;
+  top: 49.7%;
+  width: calc(100% * 1708 / 920 * .94);
+  height: calc(100% * 920 / 1708 * .811);
+  transform: translate(-50%, -50%) rotate(90deg);
+  background: #f4f4f4;
+}
 .drizzle-phone-preview { background: #fefefe; }
 .drizzle-phone-preview-views,
 .drizzle-phone-preview-views img {
@@ -634,29 +674,21 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
 .drizzle-weather .drizzle-phone-preview-home { bottom: 0; height: 3.3%; }
 .drizzle-research-viewport {
   width: 100%;
-  height: 100%;
-  overflow: auto;
-  scrollbar-width: none;
-  overscroll-behavior: contain;
-  touch-action: none;
-  user-select: none;
-  cursor: grab;
+  height: calc(100% - 44px);
+  padding: 12px 18px 0;
+  box-sizing: border-box;
 }
-.drizzle-research-viewport:active { cursor: grabbing; }
 .drizzle-research-viewport img {
   display: block;
-  width: var(--research-board-width, 1900px);
-  height: auto;
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .drizzle-research-controls {
   position: absolute;
-  inset: auto 9% 3%;
+  inset: auto 9% 6px;
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 4px;
-  pointer-events: none;
 }
 .drizzle-research-controls button {
   min-width: 32px;
@@ -671,8 +703,13 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   pointer-events: auto;
 }
 .drizzle-research-controls button:hover { background: #234875; }
-.drizzle-research-controls button:disabled { opacity: .5; cursor: default; }
 @media (prefers-reduced-motion: no-preference) {
+  .drizzle-phone,
+  .drizzle-phone-handset {
+    transition: width 600ms cubic-bezier(.22, .7, .25, 1),
+      height 600ms cubic-bezier(.22, .7, .25, 1),
+      transform 600ms cubic-bezier(.22, .7, .25, 1);
+  }
   .drizzle-phone.is-unlocked .drizzle-phone-lock::before {
     transition: transform 480ms cubic-bezier(.22, .7, .25, 1);
   }

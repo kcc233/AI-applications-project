@@ -14,12 +14,6 @@
     panel: document.getElementById(icon.getAttribute('aria-controls')),
   }));
   const boardViewport = research.querySelector('.drizzle-research-viewport');
-  const boardImage = boardViewport.querySelector('img');
-  const zoomOut = research.querySelector('[data-zoom="out"]');
-  const zoomIn = research.querySelector('[data-zoom="in"]');
-  const minBoardWidth = 1500;
-  const maxBoardWidth = Number(boardImage.getAttribute('width'));
-  let boardDrag = null;
   const aisleTop = 711;
   const aisleBottom = 920;
   const spriteHeight = 340;
@@ -117,30 +111,13 @@
   }
 
   function showPhoneApp(app) {
+    phone.classList.toggle('is-research', app === research);
     const atHome = phone.classList.contains('is-unlocked') && !app;
     homeScreen.setAttribute('aria-hidden', String(!atHome));
     for (const { icon, panel } of phoneApps) {
       icon.hidden = !atHome;
       panel.hidden = app !== panel;
     }
-  }
-
-  function sizeResearchBoard(width) {
-    boardImage.style.setProperty('--research-board-width', `${width}px`);
-    zoomOut.disabled = width <= minBoardWidth;
-    zoomIn.disabled = width >= maxBoardWidth;
-  }
-
-  function zoomResearchBoard(factor) {
-    const currentWidth = boardImage.offsetWidth;
-    const nextWidth = clamp(Math.round(currentWidth * factor), minBoardWidth, maxBoardWidth);
-    const halfWidth = boardViewport.clientWidth / 2;
-    const halfHeight = boardViewport.clientHeight / 2;
-    const scale = nextWidth / currentWidth;
-    const left = (boardViewport.scrollLeft + halfWidth) * scale - halfWidth;
-    const top = (boardViewport.scrollTop + halfHeight) * scale - halfHeight;
-    sizeResearchBoard(nextWidth);
-    boardViewport.scrollTo(left, top);
   }
 
   train.addEventListener('pointerdown', event => {
@@ -276,8 +253,6 @@
   });
   researchIcon.addEventListener('click', () => {
     showPhoneApp(research);
-    sizeResearchBoard(1900);
-    boardViewport.scrollTo(boardImage.offsetWidth * .475, 0);
     boardViewport.focus({ preventScroll: true });
   });
   research.querySelector('.drizzle-research-home').addEventListener('click', () => {
@@ -307,29 +282,11 @@
       icon.focus({ preventScroll: true });
     });
   }
-  zoomOut.addEventListener('click', () => zoomResearchBoard(1 / 1.35));
-  zoomIn.addEventListener('click', () => zoomResearchBoard(1.35));
-  boardViewport.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || boardDrag) return;
-    boardDrag = {
-      pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-      left: boardViewport.scrollLeft,
-      top: boardViewport.scrollTop,
-    };
-    boardViewport.setPointerCapture(event.pointerId);
-  });
-  boardViewport.addEventListener('pointermove', event => {
-    if (boardDrag?.pointerId !== event.pointerId) return;
-    boardViewport.scrollTo(
-      boardDrag.left + boardDrag.x - event.clientX,
-      boardDrag.top + boardDrag.y - event.clientY,
-    );
-  });
-  boardViewport.addEventListener('lostpointercapture', () => { boardDrag = null; });
   closePhone.addEventListener('click', () => phone.close());
-  phone.addEventListener('close', paintRider);
+  phone.addEventListener('close', () => {
+    showPhoneApp(null);
+    paintRider();
+  });
   drizzleWorld.addEventListener('close', () => {
     if (phone.open) phone.close();
     stopWalking();

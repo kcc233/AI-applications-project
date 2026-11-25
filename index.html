@@ -32,7 +32,7 @@
       <button class="enter-museum" type="button">Enter museum</button>
     </section>
     <main class="gallery" aria-label="A sunlit gallery room" inert>
-      <canvas id="room" width="790" height="510" tabindex="0" role="application" aria-describedby="controls" aria-label="A pixel-art museum room in warm afternoon sunlight. Six ornate gold frames display Whack-a-Mole, Puma Dunk, Drizzle App, HTML CSS Project, a moonlit dragon and castle, and a DOE antlered warrior above a wooden bench, with an AirPod Prototype on a marble pedestal on the left and a golden Greek bust on the right.">A sunlit gallery with six framed pixel artworks, a playable character, a wooden bench, an AirPod Prototype, and a golden Greek bust.</canvas>
+      <canvas id="room" width="790" height="510" tabindex="0" role="application" aria-describedby="controls" aria-label="A pixel-art museum room in warm afternoon sunlight. An elevated animated Whack-a-Mole arcade machine hangs beside five ornate gold frames displaying Puma Dunk, Drizzle App, HTML CSS Project, a moonlit dragon and castle, and a DOE antlered warrior above a wooden bench, with an AirPod Prototype on a marble pedestal on the left and a golden Greek bust on the right.">A sunlit gallery with an elevated Whack-a-Mole arcade machine, five framed pixel artworks, a playable character, a wooden bench, an AirPod Prototype, and a golden Greek bust.</canvas>
       <canvas id="plaque-labels" aria-hidden="true"></canvas>
       <canvas id="museum-foreground" aria-hidden="true"></canvas>
       <button id="doe-portal" class="artwork-portal" type="button" aria-label="View the DOE poster" aria-haspopup="dialog"></button>
@@ -73,7 +73,7 @@
         <div class="statue-choices" role="group" aria-label="Questions for the statue" inert>
           <button type="button" data-reply="He made the projects. I give the tours. We were supposed to split the work, but I haven’t had a day off since I was carved.">Reece? Who’s that?</button>
           <button type="button" data-reply="It’ll show you a better look at the piece. If you see an ‘Enter World’ button, go ahead and try it! You can always come back to the museum.">What happens when I click a plaque?</button>
-          <button type="button" data-reply="Try Drizzle. It’s a weather app for Vancouver, where it can be raining at your stop and snowing by the time you get off the train.">Which exhibit should I visit first?</button>
+          <button type="button" data-reply="Reece said he wanted to take Whack-a-Mole to the next level. Maintenance took him literally. Step onto the carpet lift and find out for yourself.">Why is there an arcade machine up there??</button>
           <button type="button" data-reply="Look around for ‘Early Iterations.’ That’s where you’ll find rough drafts and ideas that changed along the way. I’d show you my early sketches, but I was carved before anyone thought to save a backup.">Can I see how the projects were made?</button>
           <button type="button" data-reply="Of course! I was asked to greet visitors. Walking them around was a bit of a stretch.">Wait… you can talk?</button>
           <button type="button" data-farewell data-reply="Enjoy the museum! If you need me, I’ll be right here. Occupational hazard.">Thanks. I’ll look around.</button>
@@ -141,14 +141,12 @@
           <button class="drizzle-phone-app-icon drizzle-mid-fidelity-icon" type="button" aria-label="Open Mid-fidelity" aria-controls="drizzle-mid-fidelity" hidden></button>
           <button class="drizzle-phone-app-icon drizzle-weather-icon" type="button" aria-label="Open Drizzle" aria-controls="drizzle-weather" hidden></button>
           <section id="drizzle-research" class="drizzle-research" aria-label="Drizzle research" hidden>
-            <div class="drizzle-research-viewport" tabindex="0" role="region" aria-label="Research board. Drag or use the arrow keys to pan.">
+            <div class="drizzle-research-viewport" tabindex="0" role="region" aria-label="Full research board.">
               <img src="assets/drizzle/research-board.jpg" width="7000" height="3819" loading="lazy" draggable="false"
                 alt="Drizzle research board with a mind map, project rationale, two commuter personas, weather app references, and a user flow.">
             </div>
             <div class="drizzle-research-controls">
               <button type="button" class="drizzle-research-home">‹ Home</button>
-              <button type="button" data-zoom="out" aria-label="Zoom out">−</button>
-              <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
             </div>
           </section>
           <section id="drizzle-mid-fidelity" class="drizzle-phone-preview" aria-label="Drizzle mid-fidelity prototype" hidden>

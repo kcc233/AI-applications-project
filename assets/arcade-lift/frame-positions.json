@@ -1,0 +1,115 @@
+{
+  "width": 2048,
+  "height": 961,
+  "frameDurationMs": 60,
+  "frames": [
+    {
+      "filename": "lift-01.png",
+      "platformTopY": 665,
+      "riderFeetX": 686,
+      "riderFeetY": 695
+    },
+    {
+      "filename": "lift-02.png",
+      "platformTopY": 662,
+      "riderFeetX": 686,
+      "riderFeetY": 692
+    },
+    {
+      "filename": "lift-03.png",
+      "platformTopY": 655,
+      "riderFeetX": 686,
+      "riderFeetY": 685
+    },
+    {
+      "filename": "lift-04.png",
+      "platformTopY": 642,
+      "riderFeetX": 686,
+      "riderFeetY": 672
+    },
+    {
+      "filename": "lift-05.png",
+      "platformTopY": 622,
+      "riderFeetX": 686,
+      "riderFeetY": 652
+    },
+    {
+      "filename": "lift-06.png",
+      "platformTopY": 596,
+      "riderFeetX": 686,
+      "riderFeetY": 626
+    },
+    {
+      "filename": "lift-07.png",
+      "platformTopY": 562,
+      "riderFeetX": 686,
+      "riderFeetY": 592
+    },
+    {
+      "filename": "lift-08.png",
+      "platformTopY": 524,
+      "riderFeetX": 686,
+      "riderFeetY": 554
+    },
+    {
+      "filename": "lift-09.png",
+      "platformTopY": 481,
+      "riderFeetX": 686,
+      "riderFeetY": 511
+    },
+    {
+      "filename": "lift-10.png",
+      "platformTopY": 435,
+      "riderFeetX": 686,
+      "riderFeetY": 465
+    },
+    {
+      "filename": "lift-11.png",
+      "platformTopY": 390,
+      "riderFeetX": 686,
+      "riderFeetY": 420
+    },
+    {
+      "filename": "lift-12.png",
+      "platformTopY": 347,
+      "riderFeetX": 686,
+      "riderFeetY": 377
+    },
+    {
+      "filename": "lift-13.png",
+      "platformTopY": 309,
+      "riderFeetX": 686,
+      "riderFeetY": 339
+    },
+    {
+      "filename": "lift-14.png",
+      "platformTopY": 278,
+      "riderFeetX": 686,
+      "riderFeetY": 308
+    },
+    {
+      "filename": "lift-15.png",
+      "platformTopY": 254,
+      "riderFeetX": 686,
+      "riderFeetY": 284
+    },
+    {
+      "filename": "lift-16.png",
+      "platformTopY": 238,
+      "riderFeetX": 686,
+      "riderFeetY": 268
+    },
+    {
+      "filename": "lift-17.png",
+      "platformTopY": 229,
+      "riderFeetX": 686,
+      "riderFeetY": 259
+    },
+    {
+      "filename": "lift-18.png",
+      "platformTopY": 226,
+      "riderFeetX": 686,
+      "riderFeetY": 256
+    }
+  ]
+}

@@ -317,6 +317,13 @@ const plaqueTitles = [
 ];
 // Leave space for carved tips and plaques between rows and above the skirting.
 artworks.forEach((artwork, index) => {
+  if (index === 0) {
+    // Float the arcade cabinet above its original plaque, without a picture frame.
+    // The transparent sprite margins are included in the clickable exhibit bounds.
+    frames.push({ x: 118.5, y: 0, width: 93, height: 124, index });
+    plaque(165, 128, plaqueTitles[index], index);
+    return;
+  }
   const portrait = artwork.ratio < 1;
   const innerWidth = portrait ? 58 * artwork.ratio : 100;
   const innerHeight = portrait ? 58 : 100 / artwork.ratio;
