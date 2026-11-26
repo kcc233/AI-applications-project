@@ -1165,15 +1165,16 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
 .doe-concept-board span {
   position: absolute;
   pointer-events: none;
-  background: #ffdd8c32;
-  box-shadow: inset 0 0 0 1px #ffdf91, 0 0 6px #ffc867dd, 0 0 15px #ffb74a88;
-  opacity: 0;
-  transition: opacity 180ms ease-out;
+  background: #ffdd8c55;
+  box-shadow: inset 0 0 0 2px #fff0b3, inset 0 0 12px #ffe09288,
+    0 0 10px 2px #ffd477, 0 0 24px 5px #ffb74abb;
+  opacity: .7;
+  animation: doe-exhibit-pulse 2.8s ease-in-out infinite;
 }
-.doe-concept-board:is(:hover, :focus-visible) span { opacity: 1; }
+.doe-concept-board:is(:hover, :focus-visible) span { filter: brightness(1.4); }
 .doe-concept-board:focus-visible { outline: 2px solid #ffdc8b; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
-  .doe-concept-board span { transition: none; }
+  .doe-concept-board span { animation: none; }
 }
 
 .doe-board-preview {
@@ -1255,22 +1256,48 @@ canvas:focus-visible { outline: 3px solid #ffe092; outline-offset: -3px; }
   position: absolute;
   inset: 0 4% auto;
   height: var(--hologram-screen-height);
-  background: #a6fc2e3b;
-  box-shadow: inset 0 0 10px #ccff7a99, 0 0 14px #9ce33177;
-  opacity: 0;
+  background: #a6fc2e55;
+  box-shadow: inset 0 0 0 2px #e0ff9c, inset 0 0 18px #ccff7acc,
+    0 0 14px 3px #b6ff55, 0 0 30px 7px #9ce331bb;
+  opacity: .7;
+  animation: doe-exhibit-pulse 2.8s ease-in-out infinite;
   pointer-events: none;
 }
 .doe-hologram:is(:hover, :focus-visible)::after {
-  opacity: .8;
-  animation: doe-hologram-blink 1.65s ease-in-out infinite;
+  filter: brightness(1.4);
 }
-@keyframes doe-hologram-blink {
-  0%, 100% { opacity: .8; }
-  50% { opacity: .13; }
+@keyframes doe-exhibit-pulse {
+  0%, 100% { opacity: .55; }
+  50% { opacity: 1; }
 }
 .doe-hologram:focus-visible { outline: 2px solid #d4ff82; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) {
-  .doe-hologram:is(:hover, :focus-visible)::after { animation: none; }
+  .doe-hologram::after { animation: none; }
+}
+
+.doe-final-poster {
+  position: absolute;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.doe-final-poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #ffc86730;
+  box-shadow: inset 0 0 0 2px #fff0b3, inset 0 0 18px #ffc867aa,
+    0 0 12px 3px #ffd477, 0 0 30px 7px #ffb74abb;
+  pointer-events: none;
+  opacity: .7;
+  animation: doe-exhibit-pulse 2.8s ease-in-out infinite;
+}
+.doe-final-poster:is(:hover, :focus-visible)::after { filter: brightness(1.4); }
+.doe-final-poster:focus-visible { outline: 2px solid #ffdc8b; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .doe-final-poster::after { animation: none; }
 }
 
 .doe-hologram-preview {

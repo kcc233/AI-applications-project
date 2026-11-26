@@ -293,6 +293,7 @@ canvas.addEventListener('galleryresize', () => {
   if (pendingWalk?.sceneName === activeScene) {
     if (pendingWalk.onArrival === showDoeConceptBoard) walkToDoeConceptBoard();
     else if (pendingWalk.onArrival === showDoeHologram) walkToDoeHologram();
+    else if (pendingWalk.onArrival === showDoePreview && activeScene === 'doe') walkToDoeFinalPoster();
     else moveTo(pendingWalk.destination, pendingWalk.onArrival);
   }
 });
@@ -345,6 +346,7 @@ const moonlitWorld = document.querySelector('#moonlit-world');
 let openingMoonlitWorld = false;
 const doeConceptBoard = document.querySelector('#doe-concept-board');
 const doeHologram = document.querySelector('#doe-hologram');
+const doeFinalPoster = document.querySelector('#doe-final-poster');
 const doeHologramPreview = document.querySelector('#doe-hologram-preview');
 const doeHologramPanel = document.querySelector('#doe-hologram-panel');
 const doeHologramActivation = document.querySelector('#doe-hologram-activation');
@@ -403,6 +405,14 @@ function playDoeSmoke(covering) {
 }
 
 function updateSceneControls() {
+  doeFinalPoster.hidden = activeScene !== 'doe' || !scene.finalPoster;
+  if (!doeFinalPoster.hidden) {
+    const { left, right, top, bottom } = scene.finalPoster;
+    Object.assign(doeFinalPoster.style, {
+      left: `${left / canvas.width * 100}%`, top: `${top / canvas.height * 100}%`,
+      width: `${(right - left) / canvas.width * 100}%`, height: `${(bottom - top) / canvas.height * 100}%`,
+    });
+  }
   museumBack.hidden = activeScene !== 'doe';
   const hologram = scene.hologram;
   doeHologram.hidden = activeScene !== 'doe' || !hologram;
@@ -522,7 +532,8 @@ function returnToMuseum() {
   doePortal.focus({ preventScroll: true });
 }
 function showDoePreview() {
-  if (activeScene !== 'museum' || doePreview.open || openingDoe) return;
+  if (doePreview.open || openingDoe) return;
+  doeEnterWorld.hidden = activeScene === 'doe';
   route = [];
   exhibitWalk = null;
   lastTime = 0;
@@ -533,6 +544,17 @@ function showDoePreview() {
 
 doePortal.addEventListener('click', approachDoeExhibit);
 doePlaquePortal.addEventListener('click', approachDoeExhibit);
+function walkToDoeFinalPoster() {
+  if (activeScene !== 'doe' || !scene.finalPoster || openingDoe || doePreview.open ||
+      exhibitWalk?.onArrival === showDoePreview) return;
+  const { left, right } = scene.finalPoster;
+  canvas.focus({ preventScroll: true });
+  moveTo({ x: scene.left + (left + right) / 2, y: floorTop() + 14 }, showDoePreview);
+}
+doeFinalPoster.addEventListener('click', walkToDoeFinalPoster);
+doePreview.addEventListener('close', () => {
+  if (activeScene === 'doe' && !openingDoe) doeFinalPoster.focus({ preventScroll: true });
+});
 function bindArtworkTilt(surface, dialog) {
   const resetTilt = () => {
     surface.style.removeProperty('--tilt-x');

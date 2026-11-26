@@ -70,6 +70,7 @@ function drawWorkshopBackground(painter, width, height) {
       bounds: projectRect(portrait ? [366, 774, 184, 377] : [865, 193, 185, 354]),
       screenBottom: projectY((portrait ? 974 : 389) / imageHeight),
     },
+    finalPoster: projectRect(portrait ? [592, 800, 173, 251] : [1164, 211, 190, 260]),
   };
 }
 
@@ -95,6 +96,7 @@ function renderDoeRoom() {
     avatarHeight: layout.avatarHeight,
     conceptBoard: layout.conceptBoard,
     hologram: layout.hologram,
+    finalPoster: layout.finalPoster,
     spawn: { x: 345, y: top + layout.spawnY },
     bench: null, plaques: [], frames: [], obstacles: [],
   };
