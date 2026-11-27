@@ -1,0 +1,1070 @@
+/* Pixel avatar and floor navigation, in the same world coordinates as the room. */
+'use strict';
+const MOVE_SPEED = 225; // Room units per second.
+const WALK_FRAME_RATE = 8; // Animation frames per second, independent of travel.
+const MUSEUM_VISITOR_HEIGHT = 120;
+const WALK_DIRECTIONS = { ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] };
+const movementDirection = key => WALK_DIRECTIONS[key.length === 1 ? key.toLowerCase() : key];
+const player = { x: 345, y: 467, facing: 1, back: false, walkTime: 0 };
+const museumVisitor = new Image();
+museumVisitor.addEventListener('load', () => {
+  if (activeScene === 'museum') paintScene();
+});
+museumVisitor.src = 'assets/characters/museum-adventurer.png';
+// The poses are spaced unevenly. Center each crop on its own head and keep a shared foot baseline per row.
+const museumVisitorFrameX = [46, 325, 588, 845, 1119];
+const obstacles = [
+  { left: 202, right: 487, top: 361, bottom: 430 }, // bench plus foot clearance
+  { left: 607, right: 691, top: 337, bottom: 364 }, // pedestal
+  { left: -13, right: 72, top: 337, bottom: 364 }, // AirPods pedestal
+];
+let route = [];
+let exhibitWalk = null;
+let arcadeLift = null;
+let arcadeLiftAssets = null;
+let arcadeLiftLoading;
+let animationFrame = 0;
+let lastTime = 0;
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let hoveredPlaque = null;
+let shineStarted = 0;
+const SHINE_DURATION = 700;
+const clamp = (n, low, high) => Math.max(low, Math.min(high, n));
+const inside = (p, r) => p.x > r.left && p.x < r.right && p.y > r.top && p.y < r.bottom;
+const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const floorTop = () => scene.floorTop ?? 351;
+const playerMargin = () => activeScene === 'doe' ? Math.ceil(scene.avatarHeight * .36) : 31;
+const sceneObstacles = () => scene.obstacles ?? obstacles;
+
+function floorPoint(point) {
+  const p = {
+    x: clamp(point.x, scene.left + playerMargin(), scene.right - playerMargin()),
+    y: clamp(point.y, floorTop(), scene.bottom - 10),
+  };
+  for (const r of sceneObstacles()) {
+    if (!inside(p, r)) continue;
+    const exits = [
+      { x: r.left - 1, y: p.y }, { x: r.right + 1, y: p.y },
+      { x: p.x, y: r.top - 1 }, { x: p.x, y: r.bottom + 1 },
+    ].filter(q => q.x >= scene.left + playerMargin() && q.x <= scene.right - playerMargin() && q.y >= floorTop() && q.y <= scene.bottom - 10);
+    exits.sort((a, b) => distance(p, a) - distance(p, b));
+    if (exits.length) Object.assign(p, exits[0]);
+  }
+  return p;
+}
+
+// Segment/rectangle intersection: routes go around furniture, never through it.
+function clearPath(a, b) {
+  return !sceneObstacles().some(r => {
+    let enter = 0, leave = 1;
+    for (const [axis, min, max] of [['x', r.left, r.right], ['y', r.top, r.bottom]]) {
+      const delta = b[axis] - a[axis];
+      if (Math.abs(delta) < .0001) {
+        if (a[axis] <= min || a[axis] >= max) return false;
+      } else {
+        const t1 = (min - a[axis]) / delta, t2 = (max - a[axis]) / delta;
+        enter = Math.max(enter, Math.min(t1, t2));
+        leave = Math.min(leave, Math.max(t1, t2));
+      }
+    }
+    return enter < leave && leave > 0 && enter < 1;
+  });
+}
+
+function findRoute(destination) {
+  const nodes = [{ x: player.x, y: player.y }, floorPoint(destination)];
+  for (const r of sceneObstacles()) {
+    for (const x of [r.left - 2, r.right + 2]) {
+      for (const y of [r.top - 2, r.bottom + 2]) {
+        if (x >= scene.left + playerMargin() && x <= scene.right - playerMargin() && y >= floorTop() && y <= scene.bottom - 10) nodes.push({ x, y });
+      }
+    }
+  }
+  const costs = nodes.map(() => Infinity), previous = [], visited = new Set();
+  costs[0] = 0;
+  for (let step = 0; step < nodes.length; step++) {
+    let current = -1;
+    for (let i = 0; i < nodes.length; i++) {
+      if (!visited.has(i) && (current < 0 || costs[i] < costs[current])) current = i;
+    }
+    if (current < 0 || !Number.isFinite(costs[current])) break;
+    if (current === 1) {
+      const path = [];
+      for (let at = 1; at !== 0; at = previous[at]) path.unshift(nodes[at]);
+      return path;
+    }
+    visited.add(current);
+    for (let next = 0; next < nodes.length; next++) {
+      if (visited.has(next) || !clearPath(nodes[current], nodes[next])) continue;
+      const cost = costs[current] + distance(nodes[current], nodes[next]);
+      if (cost < costs[next]) { costs[next] = cost; previous[next] = current; }
+    }
+  }
+  return [];
+}
+
+function drawPlayer(painter) {
+  const moving = route.length > 0;
+  const phase = moving ? Math.floor(player.walkTime * WALK_FRAME_RATE) % 4 : 0;
+  const bob = moving && !reducedMotion.matches && phase % 2 ? -1 : 0;
+  const perspective = clamp(.86 + (player.y - floorTop()) / 650, .86, 1.25);
+  if (activeScene === 'doe') {
+    drawDoePlayer(phase, bob, perspective, painter);
+    return;
+  }
+  painter.save();
+  painter.translate(Math.round(player.x), Math.round(player.y + arcadeRiderOffset()));
+  const shadowScale = MUSEUM_VISITOR_HEIGHT * perspective / 96;
+  painter.fillStyle = '#3b2b1a45';
+  painter.fillRect(-18 * shadowScale, -2, 36 * shadowScale, 4);
+  painter.fillRect(-12 * shadowScale, 2, 24 * shadowScale, 2);
+  if (museumVisitor.naturalWidth) {
+    const frame = moving ? phase + 1 : 0;
+    const sourceWidth = 240;
+    const sourceHeight = 505;
+    const height = Math.round(MUSEUM_VISITOR_HEIGHT * perspective);
+    const width = Math.round(height * sourceWidth / sourceHeight);
+    painter.imageSmoothingEnabled = false;
+    painter.scale(player.facing, 1);
+    painter.drawImage(museumVisitor, museumVisitorFrameX[frame], player.back ? 574 : 10, sourceWidth, sourceHeight,
+      -Math.round(width / 2), -height, width, height);
+  }
+  painter.restore();
+}
+
+function shineIsMoving(time) {
+  return hoveredPlaque !== null && !reducedMotion.matches && time - shineStarted < SHINE_DURATION;
+}
+
+function drawPlaqueShine(time) {
+  if (hoveredPlaque === null) return;
+  const plaque = scene.plaques[hoveredPlaque];
+  if (!plaque) return;
+  const progress = reducedMotion.matches ? .5 : clamp((time - shineStarted) / SHINE_DURATION, 0, 1);
+  if (progress >= 1) return;
+  const { x, y, width, height } = plaque;
+  const sweepX = Math.round(x - 28 + progress * (width + 56));
+  ctx.save();
+  ctx.translate(-scene.left, -scene.top);
+  // Clip the reflection inside the brass bevel, leaving the wall untouched.
+  ctx.beginPath(); ctx.rect(x + 2, y + 2, width - 4, height - 4); ctx.clip();
+  const shine = ctx.createLinearGradient(sweepX - 10, 0, sweepX + 16, 0);
+  shine.addColorStop(0, '#fff6c200');
+  shine.addColorStop(.4, '#fff6c24d');
+  shine.addColorStop(.5, '#fffef0b3');
+  shine.addColorStop(.62, '#fff6c266');
+  shine.addColorStop(1, '#fff6c200');
+  ctx.fillStyle = shine;
+  ctx.beginPath();
+  ctx.moveTo(sweepX, y); ctx.lineTo(sweepX + 26, y);
+  ctx.lineTo(sweepX + 14, y + height); ctx.lineTo(sweepX - 12, y + height);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function paintScene(time = performance.now()) {
+  if (!scene) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(scene.background, 0, 0);
+  drawPlaqueShine(time);
+  const paintAvatar = painter => {
+    painter.save();
+    painter.translate(-scene.left, -scene.top);
+    drawPlayer(painter);
+    painter.restore();
+  };
+  if (scene.bench) {
+    const foreground = museumForeground.getContext('2d');
+    foreground.clearRect(0, 0, museumForeground.width, museumForeground.height);
+    drawArcadeLift(foreground);
+    if (player.y < 430) paintAvatar(foreground);
+    foreground.drawImage(scene.bench, 0, 0);
+    if (player.y >= 430) paintAvatar(foreground);
+  } else if (activeScene === 'doe') {
+    const foreground = museumForeground.getContext('2d');
+    foreground.clearRect(0, 0, museumForeground.width, museumForeground.height);
+    foreground.imageSmoothingEnabled = false;
+    paintAvatar(foreground);
+  } else paintAvatar(ctx);
+}
+
+function animate(time) {
+  animationFrame = 0;
+  const elapsed = lastTime ? Math.min((time - lastTime) / 1000, .05) : 0;
+  lastTime = time;
+  if (route.length) player.walkTime += elapsed;
+  let remaining = elapsed * MOVE_SPEED;
+  while (route.length && remaining > 0) {
+    const target = route[0], length = distance(player, target);
+    const dx = target.x - player.x, dy = target.y - player.y;
+    const step = Math.min(remaining, length);
+    if (Math.abs(dx) > .1) player.facing = dx < 0 ? -1 : 1;
+    player.back = dy < -Math.abs(dx) * .6;
+    if (length > 0) { player.x += dx / length * step; player.y += dy / length * step; }
+    remaining -= step;
+    if (length <= step + .001) route.shift();
+  }
+  const arrived = !route.length ? exhibitWalk : null;
+  if (arrived) player.back = true;
+  paintScene(time);
+  if (!route.length) { lastTime = 0; player.walkTime = 0; }
+  if (arrived) exhibitWalk = null;
+  if (route.length || shineIsMoving(time)) animationFrame = requestAnimationFrame(animate);
+  if (arrived) arrived.onArrival();
+}
+
+function moveTo(destination, onArrival = null) {
+  if (arcadeLift) return;
+  route = findRoute(destination);
+  exhibitWalk = onArrival && route.length ? { destination, onArrival, sceneName: activeScene } : null;
+  if (!animationFrame && route.length) animationFrame = requestAnimationFrame(animate);
+  if (!route.length && onArrival && distance(player, floorPoint(destination)) < 1) onArrival();
+}
+
+function approachDoeExhibit() {
+  approachMuseumFrame(5, doePreview, showDoePreview);
+}
+
+function approachMoonlitExhibit() {
+  approachMuseumFrame(MOONLIT_FRAME_INDEX, moonlitPreview, showMoonlitPreview);
+}
+
+function approachMuseumFrame(index, preview, onArrival) {
+  if (activeScene !== 'museum' || arcadeLift || openingDoe || preview.open || exhibitWalk?.onArrival === onArrival) return;
+  const frame = scene.frames.find(frame => frame.index === index);
+  if (!frame) return;
+  canvas.focus({ preventScroll: true });
+  moveTo({ x: frame.x + frame.width / 2, y: floorTop() + 8 }, onArrival);
+}
+
+function pointerPosition(event) {
+  const bounds = canvas.getBoundingClientRect();
+  return {
+    x: (event.clientX - bounds.left) / bounds.width * canvas.width + scene.left,
+    y: (event.clientY - bounds.top) / bounds.height * canvas.height + scene.top,
+  };
+}
+
+function handleGalleryHover(event) {
+  if (!scene || event.pointerType === 'touch') return;
+  const point = pointerPosition(event);
+  const index = scene.plaques.findIndex(p => point.x >= p.x && point.x <= p.x + p.width && point.y >= p.y && point.y <= p.y + p.height);
+  const nextPlaque = index < 0 ? null : index;
+  if (nextPlaque === hoveredPlaque) return;
+  hoveredPlaque = nextPlaque;
+  shineStarted = performance.now();
+  if (hoveredPlaque !== null && !reducedMotion.matches && !animationFrame) animationFrame = requestAnimationFrame(animate);
+  paintScene();
+}
+function clearGalleryHover() {
+  hoveredPlaque = null;
+  paintScene();
+}
+canvas.addEventListener('pointermove', handleGalleryHover);
+canvas.addEventListener('pointerleave', clearGalleryHover);
+
+canvas.addEventListener('pointerdown', event => {
+  if (!scene || (event.button !== undefined && event.button !== 0)) return;
+  const point = pointerPosition(event);
+  if (activeScene === 'museum' && [...scene.frames, ...scene.plaques].some(target => target.index === 5 &&
+    point.x >= target.x && point.x <= target.x + target.width && point.y >= target.y && point.y <= target.y + target.height)) {
+    approachDoeExhibit();
+    return;
+  }
+  // Wall clicks do not send the character into paintings or sculptures.
+  if (point.y < floorTop() - 11) return;
+  canvas.focus({ preventScroll: true });
+  moveTo(point);
+});
+canvas.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && activeScene === 'doe') {
+    event.preventDefault(); returnToMuseum(); return;
+  }
+  const direction = movementDirection(event.key);
+  if (!direction || !scene) return;
+  event.preventDefault();
+  const from = route.length ? route[route.length - 1] : player;
+  moveTo({ x: from.x + direction[0] * 28, y: from.y + direction[1] * 28 });
+});
+canvas.addEventListener('galleryresize', () => {
+  const pendingWalk = exhibitWalk;
+  cancelAnimationFrame(animationFrame);
+  animationFrame = 0; lastTime = 0; route = [];
+  exhibitWalk = null;
+  hoveredPlaque = null;
+  Object.assign(player, floorPoint(player));
+  updateSceneControls();
+  paintScene();
+  if (pendingWalk?.sceneName === activeScene) {
+    if (pendingWalk.onArrival === showDoeConceptBoard) walkToDoeConceptBoard();
+    else if (pendingWalk.onArrival === showDoeHologram) walkToDoeHologram();
+    else if (pendingWalk.onArrival === showDoePreview && activeScene === 'doe') walkToDoeFinalPoster();
+    else moveTo(pendingWalk.destination, pendingWalk.onArrival);
+  }
+});
+
+const doePortal = document.querySelector('#doe-portal');
+const statueExhibit = document.querySelector('#statue-exhibit');
+const statueChat = document.querySelector('#statue-chat');
+const statuePortrait = statueChat.querySelector('.statue-portrait');
+const statueConversation = statueChat.querySelector('.statue-conversation');
+const statueMessage = statueChat.querySelector('#statue-message');
+const statueGreeting = statueMessage.textContent;
+const statueTypedText = statueChat.querySelector('.statue-typed-text');
+const statueUntypedText = statueChat.querySelector('.statue-untyped-text');
+const statueChoices = statueChat.querySelector('.statue-choices');
+let statueSpeech;
+let statueTypingFrame;
+let statueFarewellTimer;
+const doePlaquePortal = document.querySelector('#doe-plaque-portal');
+const doePreview = document.querySelector('#doe-preview');
+const doePosterHover = document.querySelector('#doe-poster-hover');
+const doePreviewClose = document.querySelector('#doe-preview-close');
+const doeEnterWorld = document.querySelector('#doe-enter-world');
+const WHACK_FRAME_INDEX = 0;
+const whackPortal = document.querySelector('#whack-portal');
+const whackPlaquePortal = document.querySelector('#whack-plaque-portal');
+const whackPreview = document.querySelector('#whack-preview');
+const whackFrame = whackPreview.querySelector('iframe');
+let whackOpener;
+const PUMA_FRAME_INDEX = 1;
+const pumaPortal = document.querySelector('#puma-portal');
+const pumaPlaquePortal = document.querySelector('#puma-plaque-portal');
+const pumaPreview = document.querySelector('#puma-preview');
+let pumaOpener;
+const DRIZZLE_FRAME_INDEX = 2;
+const drizzlePortal = document.querySelector('#drizzle-portal');
+const drizzlePlaquePortal = document.querySelector('#drizzle-plaque-portal');
+const drizzlePreview = document.querySelector('#drizzle-preview');
+const drizzleWorld = document.querySelector('#drizzle-world');
+let drizzleOpener;
+const MAGAZINE_FRAME_INDEX = 3;
+const magazinePortal = document.querySelector('#magazine-portal');
+const magazinePlaquePortal = document.querySelector('#magazine-plaque-portal');
+const magazinePreview = document.querySelector('#magazine-preview');
+const magazineFrame = magazinePreview.querySelector('iframe');
+let magazineOpener;
+const MOONLIT_FRAME_INDEX = 4;
+const moonlitPortal = document.querySelector('#moonlit-portal');
+const moonlitPreview = document.querySelector('#moonlit-preview');
+const moonlitWorld = document.querySelector('#moonlit-world');
+let openingMoonlitWorld = false;
+const doeConceptBoard = document.querySelector('#doe-concept-board');
+const doeHologram = document.querySelector('#doe-hologram');
+const doeFinalPoster = document.querySelector('#doe-final-poster');
+const doeHologramPreview = document.querySelector('#doe-hologram-preview');
+const doeHologramPanel = document.querySelector('#doe-hologram-panel');
+const doeHologramActivation = document.querySelector('#doe-hologram-activation');
+const doeHologramClose = document.querySelector('#doe-hologram-close');
+let hologramFrameTimer;
+const doeBoardPreview = document.querySelector('#doe-board-preview');
+const doeBoardClose = document.querySelector('#doe-board-close');
+const doeSmoke = document.querySelector('#doe-smoke');
+const doeSmokeFrames = Array.from({ length: 8 }, (_, index) => {
+  const frame = document.createElement('div');
+  frame.className = 'doe-smoke-cloud';
+  frame.style.backgroundPosition = `${(index % 4) * 100 / 3}% ${index < 4 ? 0 : 100}%`;
+  doeSmoke.append(frame);
+  return frame;
+});
+const museumBack = document.querySelector('#back-to-museum');
+const sceneStatus = document.querySelector('#scene-status');
+const museumDescription = canvas.getAttribute('aria-label');
+let museumPlayer = null;
+let openingDoe = false;
+
+function playDoeSmoke(covering) {
+  const still = reducedMotion.matches;
+  const duration = still ? 100 : covering ? 560 : 680;
+  const veil = doeSmoke.animate(covering ? [
+    { backgroundColor: 'transparent' },
+    { backgroundColor: 'transparent', offset: .5 },
+    { backgroundColor: '#501018', offset: .75 },
+    { backgroundColor: '#501018' },
+  ] : [
+    { backgroundColor: '#501018' },
+    { backgroundColor: '#501018', offset: .23 },
+    { backgroundColor: 'transparent', offset: .62 },
+    { backgroundColor: 'transparent' },
+  ], { duration, easing: 'ease-in-out', fill: 'forwards' });
+  if (still) return [veil];
+  // Blend each pose over the previous one, then hold the dense frame at the cut.
+  const frames = covering ? doeSmokeFrames.slice(0, 4) : doeSmokeFrames.slice(3);
+  const clouds = frames.map((frame, index) => {
+    const interval = 1 / frames.length;
+    const last = index === frames.length - 1;
+    const keys = index === 0 ? [{ opacity: 1, offset: 0 }] : [
+      { opacity: 0, offset: 0 },
+      { opacity: 0, offset: (index - .65) * interval },
+      { opacity: 1, offset: index * interval },
+    ];
+    if (!last) {
+      const next = (index + 1) * interval;
+      keys.push({ opacity: 1, offset: next }, { opacity: 0, offset: next + .01 });
+    }
+    if (last && !covering) keys.push({ opacity: 1, offset: .84 });
+    keys.push({ opacity: last && covering ? 1 : 0, offset: 1 });
+    return frame.animate(keys, { duration, fill: 'both' });
+  });
+  return [veil, ...clouds];
+}
+
+function updateSceneControls() {
+  canvas.parentElement.classList.toggle('is-doe-world', activeScene === 'doe');
+  doeFinalPoster.hidden = activeScene !== 'doe' || !scene.finalPoster;
+  if (!doeFinalPoster.hidden) {
+    const { left, right, top, bottom } = scene.finalPoster;
+    Object.assign(doeFinalPoster.style, {
+      left: `${left / canvas.width * 100}%`, top: `${top / canvas.height * 100}%`,
+      width: `${(right - left) / canvas.width * 100}%`, height: `${(bottom - top) / canvas.height * 100}%`,
+    });
+  }
+  museumBack.hidden = activeScene !== 'doe';
+  const hologram = scene.hologram;
+  doeHologram.hidden = activeScene !== 'doe' || !hologram;
+  if (!doeHologram.hidden) {
+    const { left, right, top, bottom } = hologram.bounds;
+    Object.assign(doeHologram.style, {
+      left: `${left / canvas.width * 100}%`, top: `${top / canvas.height * 100}%`,
+      width: `${(right - left) / canvas.width * 100}%`, height: `${(bottom - top) / canvas.height * 100}%`,
+    });
+    doeHologram.style.setProperty('--hologram-screen-height', `${(hologram.screenBottom - top) / (bottom - top) * 100}%`);
+  }
+  const board = scene.conceptBoard;
+  doeConceptBoard.hidden = activeScene !== 'doe' || !board;
+  if (!doeConceptBoard.hidden) {
+    const { left, right, top, bottom } = board.bounds;
+    const width = right - left, height = bottom - top;
+    Object.assign(doeConceptBoard.style, {
+      left: `${left / canvas.width * 100}%`, top: `${top / canvas.height * 100}%`,
+      width: `${width / canvas.width * 100}%`, height: `${height / canvas.height * 100}%`,
+    });
+    board.papers.forEach((paper, index) => {
+      Object.assign(doeConceptBoard.children[index].style, {
+        left: `${(paper.left - left) / width * 100}%`, top: `${(paper.top - top) / height * 100}%`,
+        width: `${(paper.right - paper.left) / width * 100}%`,
+        height: `${(paper.bottom - paper.top) / height * 100}%`,
+      });
+    });
+  }
+  doePortal.hidden = activeScene !== 'museum';
+  statueExhibit.hidden = activeScene !== 'museum';
+  doePlaquePortal.hidden = activeScene !== 'museum';
+  moonlitPortal.hidden = activeScene !== 'museum';
+  whackPortal.hidden = activeScene !== 'museum';
+  whackPlaquePortal.hidden = activeScene !== 'museum';
+  pumaPortal.hidden = activeScene !== 'museum';
+  pumaPlaquePortal.hidden = activeScene !== 'museum';
+  drizzlePortal.hidden = activeScene !== 'museum';
+  drizzlePlaquePortal.hidden = activeScene !== 'museum';
+  magazinePortal.hidden = activeScene !== 'museum';
+  magazinePlaquePortal.hidden = activeScene !== 'museum';
+  if (activeScene === 'museum') {
+    positionGalleryPortal(statueExhibit, statueBounds);
+    positionGalleryPortal(doePortal, scene.frames.find(frame => frame.index === 5));
+    positionGalleryPortal(doePlaquePortal, scene.plaques.find(plaque => plaque.index === 5));
+    positionGalleryPortal(moonlitPortal, scene.frames.find(frame => frame.index === MOONLIT_FRAME_INDEX));
+    positionGalleryPortal(whackPortal, scene.frames.find(frame => frame.index === WHACK_FRAME_INDEX));
+    positionGalleryPortal(whackPlaquePortal, scene.plaques.find(plaque => plaque.index === WHACK_FRAME_INDEX));
+    positionGalleryPortal(pumaPortal, scene.frames.find(frame => frame.index === PUMA_FRAME_INDEX));
+    positionGalleryPortal(pumaPlaquePortal, scene.plaques.find(plaque => plaque.index === PUMA_FRAME_INDEX));
+    positionGalleryPortal(drizzlePortal, scene.frames.find(frame => frame.index === DRIZZLE_FRAME_INDEX));
+    positionGalleryPortal(drizzlePlaquePortal, scene.plaques.find(plaque => plaque.index === DRIZZLE_FRAME_INDEX));
+    positionGalleryPortal(magazinePortal, scene.frames.find(frame => frame.index === MAGAZINE_FRAME_INDEX));
+    positionGalleryPortal(magazinePlaquePortal, scene.plaques.find(plaque => plaque.index === MAGAZINE_FRAME_INDEX));
+  }
+  canvas.setAttribute('aria-label', activeScene === 'doe'
+    ? 'DOE design workshop. An antlered armored character explores a workshop with a concept desk, green assembly hologram, and final DOE display. Click or tap the tiled floor to walk.'
+    : museumDescription);
+}
+
+function positionGalleryPortal(portal, artwork) {
+  if (!artwork) return;
+  Object.assign(portal.style, {
+    left: `${(artwork.x - scene.left) / canvas.width * 100}%`,
+    top: `${(artwork.y - scene.top) / canvas.height * 100}%`,
+    width: `${artwork.width / canvas.width * 100}%`,
+    height: `${artwork.height / canvas.height * 100}%`,
+  });
+}
+
+async function openDoeWorld() {
+  if (openingDoe || activeScene === 'doe') return;
+  openingDoe = true;
+  doePortal.disabled = true;
+  doePlaquePortal.disabled = true;
+  canvas.setAttribute('aria-busy', 'true');
+  sceneStatus.hidden = true;
+  const museum = canvas.parentElement;
+  museum.inert = true;
+  doeSmoke.hidden = false;
+  const cover = playDoeSmoke(true);
+  try {
+    await Promise.all(cover.map(animation => animation.finished));
+    await doeAssetsReady;
+    museumPlayer = { ...player, walkTime: 0 };
+    activeScene = 'doe';
+    renderRoom();
+    Object.assign(player, {
+      x: scene.spawn.x, y: scene.spawn.y,
+      facing: 1, back: false, walkTime: 0,
+    });
+    paintScene();
+  } catch (error) {
+    console.error(error);
+    sceneStatus.textContent = 'This world couldn’t open. Please try again.';
+    sceneStatus.hidden = false;
+  } finally {
+    const clear = playDoeSmoke(false);
+    cover.forEach(animation => animation.cancel());
+    await Promise.allSettled(clear.map(animation => animation.finished));
+    doeSmoke.hidden = true;
+    clear.forEach(animation => animation.cancel());
+    museum.inert = false;
+    openingDoe = false;
+    doePortal.disabled = false;
+    doePlaquePortal.disabled = false;
+    canvas.removeAttribute('aria-busy');
+    (activeScene === 'doe' ? canvas : doePortal).focus({ preventScroll: true });
+  }
+}
+
+function returnToMuseum() {
+  if (activeScene !== 'doe') return;
+  activeScene = 'museum';
+  renderRoom();
+  if (museumPlayer) Object.assign(player, museumPlayer, floorPoint(museumPlayer));
+  paintScene();
+  doePortal.focus({ preventScroll: true });
+}
+function showDoePreview() {
+  if (doePreview.open || openingDoe) return;
+  doeEnterWorld.hidden = activeScene === 'doe';
+  route = [];
+  exhibitWalk = null;
+  lastTime = 0;
+  player.walkTime = 0;
+  paintScene();
+  doePreview.showModal();
+}
+
+doePortal.addEventListener('click', approachDoeExhibit);
+doePlaquePortal.addEventListener('click', approachDoeExhibit);
+function walkToDoeFinalPoster() {
+  if (activeScene !== 'doe' || !scene.finalPoster || openingDoe || doePreview.open ||
+      exhibitWalk?.onArrival === showDoePreview) return;
+  const { left, right } = scene.finalPoster;
+  canvas.focus({ preventScroll: true });
+  moveTo({ x: scene.left + (left + right) / 2, y: floorTop() + 14 }, showDoePreview);
+}
+doeFinalPoster.addEventListener('click', walkToDoeFinalPoster);
+doePreview.addEventListener('close', () => {
+  if (activeScene === 'doe' && !openingDoe) doeFinalPoster.focus({ preventScroll: true });
+});
+function bindArtworkTilt(surface, dialog) {
+  const resetTilt = () => {
+    surface.style.removeProperty('--tilt-x');
+    surface.style.removeProperty('--tilt-y');
+  };
+  surface.addEventListener('pointermove', event => {
+    if (event.pointerType === 'touch' || reducedMotion.matches) return;
+    // Measure the wrapper so pointer coordinates don't shift as the art tilts.
+    const bounds = surface.getBoundingClientRect();
+    const x = clamp((event.clientX - bounds.left) / bounds.width * 2 - 1, -1, 1);
+    const y = clamp((event.clientY - bounds.top) / bounds.height * 2 - 1, -1, 1);
+    surface.style.setProperty('--tilt-x', `${y * 7}deg`);
+    surface.style.setProperty('--tilt-y', `${-x * 8}deg`);
+  });
+  surface.addEventListener('pointerleave', resetTilt);
+  surface.addEventListener('pointercancel', resetTilt);
+  dialog.addEventListener('close', resetTilt);
+}
+
+bindArtworkTilt(doePosterHover, doePreview);
+function showMoonlitPreview() {
+  if (activeScene === 'museum' && !moonlitPreview.open && !openingDoe) moonlitPreview.showModal();
+}
+
+function showPumaPreview() {
+  pumaPreview.showModal();
+}
+
+bindArtworkTilt(pumaPreview.querySelector('.doe-poster-hover'), pumaPreview);
+for (const portal of [pumaPortal, pumaPlaquePortal]) {
+  portal.addEventListener('click', () => {
+    pumaOpener = portal;
+    approachMuseumFrame(PUMA_FRAME_INDEX, pumaPreview, showPumaPreview);
+  });
+}
+pumaPreview.addEventListener('close', () => pumaOpener?.focus({ preventScroll: true }));
+pumaPlaquePortal.addEventListener('pointermove', handleGalleryHover);
+pumaPlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+
+function showDrizzlePreview() {
+  if (activeScene === 'museum' && !drizzlePreview.open && !openingDoe) drizzlePreview.showModal();
+}
+
+bindArtworkTilt(drizzlePreview.querySelector('.doe-poster-hover'), drizzlePreview);
+for (const portal of [drizzlePortal, drizzlePlaquePortal]) {
+  portal.addEventListener('click', () => {
+    drizzleOpener = portal;
+    approachMuseumFrame(DRIZZLE_FRAME_INDEX, drizzlePreview, showDrizzlePreview);
+  });
+}
+drizzlePreview.querySelector('.doe-preview-close').addEventListener('click', () => drizzlePreview.close());
+drizzlePreview.addEventListener('close', () => {
+  if (!drizzleWorld.open) drizzleOpener?.focus({ preventScroll: true });
+});
+drizzlePlaquePortal.addEventListener('pointermove', handleGalleryHover);
+drizzlePlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+
+function loadArcadeLift() {
+  arcadeLiftLoading ??= (async () => {
+    const response = await fetch('assets/arcade-lift/frame-positions.json');
+    if (!response.ok) throw new Error('Could not load arcade lift positions');
+    const positions = await response.json();
+    const images = await Promise.all(positions.frames.map(async frame => {
+      const image = new Image();
+      image.src = `assets/arcade-lift/frames/${frame.filename}`;
+      await image.decode();
+      return image;
+    }));
+    arcadeLiftAssets = { ...positions, images };
+    if (activeScene === 'museum') paintScene();
+    return arcadeLiftAssets;
+  })().catch(error => {
+    arcadeLiftLoading = null;
+    throw error;
+  });
+  return arcadeLiftLoading;
+}
+
+// The supplied coordinates keep the visitor's feet on the carpet in every frame.
+const ARCADE_LIFT_SCALE = .5;
+function arcadeRiderOffset() {
+  if (!arcadeLiftAssets || !arcadeLift || activeScene !== 'museum') return 0;
+  const frames = arcadeLiftAssets.frames;
+  return (frames[arcadeLift.frame].riderFeetY - frames[0].riderFeetY) * ARCADE_LIFT_SCALE;
+}
+
+function drawArcadeLift(painter) {
+  if (activeScene !== 'museum' || !arcadeLiftAssets) return;
+  const frame = arcadeLift?.frame ?? 0;
+  const { width, height, frames, images } = arcadeLiftAssets;
+  const cabinet = scene.frames.find(frame => frame.index === WHACK_FRAME_INDEX);
+  if (!cabinet) return;
+  const x = cabinet.x + cabinet.width / 2;
+  const y = floorTop() + 8;
+  painter.save();
+  painter.imageSmoothingEnabled = false;
+  painter.translate(-scene.left, -scene.top);
+  painter.drawImage(images[frame],
+    x - frames[frame].riderFeetX * ARCADE_LIFT_SCALE,
+    y - frames[0].riderFeetY * ARCADE_LIFT_SCALE,
+    width * ARCADE_LIFT_SCALE, height * ARCADE_LIFT_SCALE);
+  painter.restore();
+}
+
+function animateArcadeLift(ascending) {
+  const state = arcadeLift;
+  state.phase = ascending ? 'up' : 'down';
+  const lastFrame = arcadeLiftAssets.frames.length - 1;
+  return new Promise(resolve => {
+    let started;
+    function step(now) {
+      started ??= now;
+      const elapsedFrame = reducedMotion.matches ? lastFrame
+        : Math.min(lastFrame, Math.floor((now - started) / arcadeLiftAssets.frameDurationMs));
+      state.frame = ascending ? elapsedFrame : lastFrame - elapsedFrame;
+      paintScene();
+      if (elapsedFrame === lastFrame) resolve();
+      else requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+function releaseArcadeLift() {
+  arcadeLift = null;
+  const museum = document.querySelector('.gallery');
+  museum.inert = false;
+  museum.classList.remove('is-arcade-riding');
+  canvas.removeAttribute('aria-busy');
+  paintScene();
+  canvas.focus({ preventScroll: true });
+}
+
+async function showWhackPreview() {
+  if (arcadeLift || whackPreview.open || activeScene !== 'museum') return;
+  arcadeLift = { frame: 0, phase: 'loading' };
+  const museum = document.querySelector('.gallery');
+  museum.inert = true;
+  museum.classList.add('is-arcade-riding');
+  canvas.setAttribute('aria-busy', 'true');
+  player.back = true;
+  try {
+    await loadArcadeLift();
+    await animateArcadeLift(true);
+    arcadeLift.phase = 'playing';
+    whackFrame.src = 'whack-a-mole/index.html';
+    whackPreview.showModal();
+  } catch (error) {
+    console.error('Could not start arcade lift', error);
+    releaseArcadeLift();
+  }
+}
+
+// Show the resting carpet before the visitor selects the arcade.
+loadArcadeLift().catch(error => console.error('Could not preload arcade lift', error));
+
+for (const portal of [whackPortal, whackPlaquePortal]) {
+  portal.addEventListener('click', () => {
+    whackOpener = portal;
+    approachMuseumFrame(WHACK_FRAME_INDEX, whackPreview, showWhackPreview);
+  });
+}
+whackPlaquePortal.addEventListener('pointermove', handleGalleryHover);
+whackPlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+whackPreview.querySelector('.doe-preview-close').addEventListener('click', () => whackPreview.close());
+whackPreview.addEventListener('close', async () => {
+  whackFrame.removeAttribute('src');
+  if (arcadeLift?.phase === 'playing') {
+    try {
+      await animateArcadeLift(false);
+    } finally {
+      releaseArcadeLift();
+    }
+  } else if (!arcadeLift) whackOpener?.focus({ preventScroll: true });
+});
+whackFrame.addEventListener('load', () => {
+  if (!whackFrame.hasAttribute('src')) return;
+  whackFrame.contentDocument?.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !whackPreview.open) return;
+    event.preventDefault();
+    whackPreview.close();
+  });
+});
+
+function showMagazinePreview() {
+  if (!magazineFrame.hasAttribute('src')) magazineFrame.src = 'magazineproject/index.html';
+  magazinePreview.showModal();
+}
+
+for (const portal of [magazinePortal, magazinePlaquePortal]) {
+  portal.addEventListener('click', () => {
+    magazineOpener = portal;
+    approachMuseumFrame(MAGAZINE_FRAME_INDEX, magazinePreview, showMagazinePreview);
+  });
+}
+magazinePreview.querySelector('.doe-preview-close').addEventListener('click', () => magazinePreview.close());
+magazinePreview.addEventListener('close', () => magazineOpener.focus({ preventScroll: true }));
+magazineFrame.addEventListener('load', () => {
+  // Keyboard events inside the embedded page stay in its document.
+  magazineFrame.contentDocument?.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !magazinePreview.open) return;
+    event.preventDefault();
+    magazinePreview.close();
+  });
+});
+
+function maskMoonlitFire(sheet) {
+  const masked = document.createElement('canvas');
+  masked.width = sheet.naturalWidth;
+  masked.height = sheet.naturalHeight;
+  const context = masked.getContext('2d', { willReadFrequently: true });
+  if (!context) return null;
+  context.drawImage(sheet, 0, 0);
+
+  // The sheet has a pale matte. Keep the warm fire colors and feather their edges.
+  let pixels;
+  try {
+    pixels = context.getImageData(0, 0, masked.width, masked.height);
+  } catch (error) {
+    if (error.name !== 'SecurityError') throw error;
+    return null;
+  }
+  const { data } = pixels;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i + 3] *= clamp((data[i] - data[i + 2] - 22) / 68, 0, 1);
+  }
+  context.putImageData(pixels, 0, 0);
+  return masked;
+}
+
+function playMoonlitFire(context, sheet, start, end, duration) {
+  const { width, height } = context.canvas;
+  return new Promise(resolve => {
+    let startedAt;
+    function drawFrame(time) {
+      startedAt ??= time;
+      const progress = Math.min((time - startedAt) / duration, 1);
+      const position = start + (end - start) * progress;
+      const frame = Math.floor(position);
+      const blend = position - frame;
+      context.clearRect(0, 0, width, height);
+      // Blend neighboring frames without making their shared opaque areas translucent.
+      context.globalCompositeOperation = 'lighter';
+      for (const [index, opacity] of [[frame, 1 - blend], [frame + 1, blend]]) {
+        if (opacity <= 0 || index >= 8) continue;
+        context.globalAlpha = opacity;
+        context.drawImage(sheet, index % 4 * width, Math.floor(index / 4) * height,
+          width, height, 0, 0, width, height);
+      }
+
+      // Keep black behind the flames through the cut, then reveal the castle.
+      if (start > 0) {
+        const backdropOpacity = clamp((end - position) / 3, 0, 1);
+        context.canvas.style.setProperty('--fire-backdrop-opacity', backdropOpacity);
+      }
+      context.globalCompositeOperation = 'source-over';
+      context.globalAlpha = 1;
+      if (progress < 1) requestAnimationFrame(drawFrame);
+      else resolve();
+    }
+    requestAnimationFrame(drawFrame);
+  });
+}
+
+async function enterMoonlitWorld() {
+  if (openingMoonlitWorld || !moonlitPreview.open) return;
+  openingMoonlitWorld = true;
+  const fire = document.createElement('canvas');
+  fire.className = 'moonlit-fire-transition';
+  fire.setAttribute('aria-hidden', 'true');
+
+  try {
+    if (!reducedMotion.matches) {
+      moonlitPreview.inert = true;
+      const sheet = new Image();
+      sheet.src = 'assets/moonlit/fire-breath-frames.png';
+      const loaded = await sheet.decode().then(() => true, () => false);
+      if (loaded) {
+        const frames = maskMoonlitFire(sheet);
+        fire.width = sheet.naturalWidth / 4;
+        fire.height = sheet.naturalHeight / 2;
+        const context = fire.getContext('2d');
+        if (frames && context) {
+          moonlitWorld.append(fire);
+          moonlitWorld.showModal();
+          moonlitWorld.inert = true;
+          moonlitPreview.close();
+          await playMoonlitFire(context, frames, 0, 3, 390);
+          await playMoonlitFire(context, frames, 4, 8, 480);
+          return;
+        }
+      }
+    }
+    moonlitPreview.close();
+    moonlitWorld.showModal();
+  } finally {
+    fire.remove();
+    moonlitPreview.inert = false;
+    moonlitWorld.inert = false;
+    openingMoonlitWorld = false;
+    if (moonlitWorld.open) moonlitWorld.querySelector('.moonlit-balcony').focus({ preventScroll: true });
+  }
+}
+
+bindArtworkTilt(document.querySelector('#moonlit-artwork-hover'), moonlitPreview);
+moonlitPortal.addEventListener('click', approachMoonlitExhibit);
+document.querySelector('#moonlit-preview-close').addEventListener('click', () => moonlitPreview.close());
+moonlitPreview.addEventListener('close', () => {
+  if (!moonlitWorld.open) moonlitPortal.focus({ preventScroll: true });
+});
+document.querySelector('#moonlit-enter-world').addEventListener('click', enterMoonlitWorld);
+for (const dialog of [moonlitPreview, moonlitWorld]) {
+  dialog.addEventListener('cancel', event => {
+    if (openingMoonlitWorld) event.preventDefault();
+  });
+}
+document.querySelector('#moonlit-world-back').addEventListener('click', () => moonlitWorld.close());
+moonlitWorld.addEventListener('close', () => moonlitPortal.focus({ preventScroll: true }));
+
+doePreviewClose.addEventListener('click', () => doePreview.close());
+doeEnterWorld.addEventListener('click', () => {
+  doePreview.close();
+  openDoeWorld();
+});
+doePlaquePortal.addEventListener('pointermove', handleGalleryHover);
+doePlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+magazinePlaquePortal.addEventListener('pointermove', handleGalleryHover);
+magazinePlaquePortal.addEventListener('pointerleave', clearGalleryHover);
+museumBack.addEventListener('click', returnToMuseum);
+function showDoeConceptBoard() {
+  if (activeScene === 'doe' && !doeBoardPreview.open) doeBoardPreview.showModal();
+}
+
+function walkToDoeConceptBoard() {
+  if (activeScene !== 'doe' || !scene.conceptBoard || openingDoe || doeBoardPreview.open ||
+      exhibitWalk?.onArrival === showDoeConceptBoard) return;
+  const { left, right } = scene.conceptBoard.bounds;
+  canvas.focus({ preventScroll: true });
+  moveTo({ x: scene.left + (left + right) / 2, y: floorTop() + 14 }, showDoeConceptBoard);
+}
+doeConceptBoard.addEventListener('click', walkToDoeConceptBoard);
+function walkToDoeHologram() {
+  if (activeScene !== 'doe' || !scene.hologram || openingDoe || doeHologramPreview.open ||
+      exhibitWalk?.onArrival === showDoeHologram) return;
+  const { left, right } = scene.hologram.bounds;
+  canvas.focus({ preventScroll: true });
+  moveTo({ x: scene.left + (left + right) / 2, y: floorTop() + 14 }, showDoeHologram);
+}
+
+function showDoeHologram() {
+  if (activeScene !== 'doe' || doeHologramPreview.open) return;
+  clearTimeout(hologramFrameTimer);
+  doeHologramPanel.hidden = true;
+  doeHologramClose.hidden = true;
+  doeHologramActivation.hidden = false;
+  doeHologramPreview.showModal();
+
+  function showFrame(frame) {
+    if (!doeHologramPreview.open) return;
+    if (frame < 8) {
+      // Select each cell directly so the browser never scrolls across the sheet.
+      doeHologramActivation.style.backgroundPosition = `${(frame % 4) * 100 / 3}% ${frame < 4 ? 0 : 100}%`;
+      hologramFrameTimer = setTimeout(() => showFrame(frame + 1), frame === 7 ? 130 : 95);
+      return;
+    }
+    doeHologramActivation.hidden = true;
+    doeHologramPanel.hidden = false;
+    doeHologramClose.hidden = false;
+    doeHologramClose.focus({ preventScroll: true });
+  }
+  showFrame(0);
+}
+
+doeHologram.addEventListener('click', walkToDoeHologram);
+doeHologramClose.addEventListener('click', () => doeHologramPreview.close());
+doeHologramPreview.addEventListener('close', () => {
+  clearTimeout(hologramFrameTimer);
+  doeHologram.focus({ preventScroll: true });
+});
+doeBoardClose.addEventListener('click', () => doeBoardPreview.close());
+doeBoardPreview.addEventListener('close', () => doeConceptBoard.focus({ preventScroll: true }));
+
+const doeSketchPreview = document.querySelector('#doe-sketch-preview');
+const doeSketchImage = document.querySelector('#doe-sketch-image');
+const doeSketchHover = document.querySelector('#doe-sketch-hover');
+let activeSketchButton = null;
+bindArtworkTilt(doeSketchHover, doeSketchPreview);
+for (const sketchButton of doeBoardPreview.querySelectorAll('.doe-board-sketches button')) {
+  sketchButton.addEventListener('click', () => {
+    if (doeSketchPreview.open) return;
+    const drawing = sketchButton.querySelector('img');
+    doeSketchImage.alt = drawing.alt;
+    doeSketchImage.width = Number(drawing.getAttribute('width'));
+    doeSketchImage.height = Number(drawing.getAttribute('height'));
+    doeSketchImage.src = drawing.src;
+    activeSketchButton = sketchButton;
+    doeSketchPreview.showModal();
+  });
+}
+document.querySelector('#doe-sketch-close').addEventListener('click', () => doeSketchPreview.close());
+doeSketchPreview.addEventListener('close', () => {
+  activeSketchButton?.focus({ preventScroll: true });
+  activeSketchButton = null;
+});
+function typeStatueMessage(message, onComplete, pauseAfter) {
+  cancelAnimationFrame(statueTypingFrame);
+  statueSpeech?.cancel();
+  statueMessage.textContent = message;
+  const animate = !reducedMotion.matches;
+  statueTypedText.textContent = animate ? '' : message;
+  statueUntypedText.textContent = animate ? message : '';
+  if (!animate) {
+    onComplete?.();
+    return;
+  }
+
+  pauseAfter ??= Array.from(
+    message.matchAll(/[.!?][”’"']*(?=\s+\S)/gu),
+    match => match.index + match[0].length
+  );
+  const duration = Math.max(900, 1350 * message.length / statueGreeting.length);
+  const iterations = Math.round(duration / 450);
+  const frames = ['7.11%', '34.77%', '62.5%', '90.22%', '7.11%'];
+  const start = performance.now();
+  const pauseDuration = 250;
+  let speechPaused = false;
+  statueSpeech = statuePortrait.animate(
+    frames.map(backgroundPositionX => ({ backgroundPositionX })),
+    { duration: duration / iterations, iterations, easing: 'steps(4, end)' }
+  );
+
+  function typeFrame(now) {
+    if (!statueChat.open) return;
+
+    let elapsed = now - start;
+    let pausedAt;
+    for (const stop of pauseAfter) {
+      const pauseStart = duration * stop / message.length;
+      if (elapsed < pauseStart) break;
+      if (elapsed < pauseStart + pauseDuration) {
+        pausedAt = stop;
+        break;
+      }
+      elapsed -= pauseDuration;
+    }
+
+    const pauseSpeech = pausedAt !== undefined;
+    if (pauseSpeech !== speechPaused) {
+      if (pauseSpeech) statueSpeech.pause();
+      else statueSpeech.play();
+      speechPaused = pauseSpeech;
+    }
+    const progress = Math.min(1, Math.max(0, elapsed / duration));
+    const count = pausedAt ?? Math.floor(progress * message.length);
+    statueTypedText.textContent = message.slice(0, count);
+    statueUntypedText.textContent = message.slice(count);
+
+    if (progress < 1) statueTypingFrame = requestAnimationFrame(typeFrame);
+    else onComplete?.();
+  }
+
+  statueTypingFrame = requestAnimationFrame(typeFrame);
+}
+
+function showStatueChat() {
+  if (activeScene !== 'museum' || statueChat.open) return;
+
+  clearTimeout(statueFarewellTimer);
+  statueChoices.inert = true;
+  const greetingPauses = ['Hey!'.length, 'Hey! are you lost?'.length];
+  typeStatueMessage(statueGreeting, () => { statueChoices.inert = false; }, greetingPauses);
+  statueChat.showModal();
+  statueConversation.scrollTop = 0;
+}
+
+statueChoices.addEventListener('click', event => {
+  const choice = event.target.closest('button[data-reply]');
+  if (!choice || !statueChat.open || statueChoices.inert) return;
+
+  const farewell = choice.hasAttribute('data-farewell');
+  if (farewell) {
+    statueChat.querySelector('.statue-chat-close').focus({ preventScroll: true });
+    statueChoices.inert = true;
+  }
+
+  typeStatueMessage(choice.dataset.reply, () => {
+    if (farewell) statueFarewellTimer = setTimeout(() => statueChat.close(), 3200);
+  });
+  statueConversation.scrollTop = 0;
+});
+
+statueChat.addEventListener('close', () => {
+  if (statueChat.open) return;
+  clearTimeout(statueFarewellTimer);
+  cancelAnimationFrame(statueTypingFrame);
+  statueSpeech?.cancel();
+});
+
+statueExhibit.addEventListener('click', () => {
+  if (activeScene !== 'museum' || openingDoe || statueChat.open ||
+    exhibitWalk?.onArrival === showStatueChat) return;
+  canvas.focus({ preventScroll: true });
+  moveTo({ x: statueBounds.x + statueBounds.width / 2, y: floorTop() + 30 }, showStatueChat);
+});
+
+updateSceneControls();
+paintScene();

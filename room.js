@@ -45,7 +45,7 @@ const artworkReady = Promise.all([...artworks, caseArtwork].map(artwork => new P
 
 function renderRoom() {
 plaqueCanvas.hidden = activeScene !== 'museum';
-museumForeground.hidden = plaqueCanvas.hidden;
+museumForeground.hidden = false;
 if (activeScene === 'doe') {
   renderDoeRoom();
   return;
@@ -409,8 +409,21 @@ function hangSideRow(from, to, y, height, firstArt) {
   const start = (from + to - (count * width + (count - 1) * gap)) / 2;
   for (let i = 0; i < count; i++) {
     const kind = sideArtOrder[(firstArt + i) % sideArtOrder.length];
-    frame(start + i * (width + gap), y, width, height, null,
+    // Shade only the decorative artwork and carved frame, including its silhouette.
+    const roomContext = ctx;
+    const decoration = document.createElement('canvas');
+    decoration.width = Math.ceil(width + 40);
+    decoration.height = Math.ceil(height + 40);
+    ctx = decoration.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    frame(20, 20, width, height, null,
       (x, y, w, h) => paintSideArt(kind, x, y, w, h));
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = '#17120c';
+    ctx.globalAlpha = .5;
+    ctx.fillRect(0, 0, decoration.width, decoration.height);
+    ctx = roomContext;
+    ctx.drawImage(decoration, start + i * (width + gap) - 20, y - 20);
   }
 }
 

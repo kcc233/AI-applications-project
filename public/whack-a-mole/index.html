@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Arcade Whack-A-Mole</title>
+
+  <link rel="stylesheet" href="style.css">
+  <script src="main.js" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Single:wght@100..900&family=Modak&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+  <main class="arcade-machine">
+
+    <header class="arcade-header">
+      <p class="insert-coin">★ INSERT A COIN ★</p>
+      <h1>WHACK A MOLE!</h1>
+      <h2>By Reece Catalogo</h2>
+    </header>
+
+    <section class="control-panel">
+
+      <div class="score-card">
+        <p>SCORE</p>
+        <span id="score">0</span>
+      </div>
+
+      <div class="score-card" id="time">
+        <p>TIME</p>
+        <span id="timer">15</span>
+      </div>
+
+      <div class="score-card">
+        <p>BEST SCORE</p>
+        <span id="best">0</span>
+      </div>
+
+    
+       <button id="startButton">
+       START GAME
+      </button>
+
+    </section>
+
+    <section class="game-screen">
+
+      <div class="screen-top">
+        <span>BEAT YOUR SCORE IN 15 SECONDS!</span>
+        <!-- <span>CLICK EVERY MOLE!</span> -->
+      </div>
+
+      <div class="playfield">
+        <div id="gameArea">
+          <button id="box" aria-label="Whack the mole">
+            <img src="MOLE.png" alt="">
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <p id="message">Press Start Game.</p>
+
+    <section class="instructions">
+      <p>1. PRESS START</p>
+      <p>2. CLICK THE MOLE</p>
+      <p>3. BEAT YOUR SCORE</p>
+    </section>
+
+    <div class="coin-slot">
+      <div class="coin-opening"></div>
+      <p>25¢</p>
+    </div>
+
+    <audio id="beep-sound">
+      <source
+        src="bonk.mp3"
+        type="audio/mpeg"
+      >
+    </audio>
+
+  </main>
+
+  <aside class="joke-mole" aria-label="Joke-telling mole">
+    <div id="jokeBox">
+      <p class="joke-title">RANDOM JOKE</p>
+      <p id="jokeText" aria-live="polite">Press Start Game for a joke!</p>
+    </div>
+    <div id="molepic">
+      <img src="Molepic.png" alt="">
+    </div>
+  </aside>
+
+</body>
+</html>

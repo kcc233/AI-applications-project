@@ -8,13 +8,12 @@ function loadDoeImage(path) {
     image.src = path;
   });
 }
-const doeArt = { background: null, portrait: null, sprite: null, backSprite: null };
+const doeArt = { background: null, portrait: null, sprite: null };
 const doeAssetsReady = Promise.all([
   loadDoeImage('assets/scenes/doe-workshop-wide.png'),
   loadDoeImage('assets/scenes/doe-workshop-portrait.png'),
-  loadDoeImage('assets/characters/doe-walk.png'),
-  loadDoeImage('assets/characters/Rear-facing antlered armor animation sheet.png'),
-]).then(([background, portrait, sprite, backSprite]) => Object.assign(doeArt, { background, portrait, sprite, backSprite }));
+  loadDoeImage('assets/characters/doe-cannon-warrior.png'),
+]).then(([background, portrait, sprite]) => Object.assign(doeArt, { background, portrait, sprite }));
 // Loading errors are reported when the visitor tries to enter the world.
 doeAssetsReady.catch(() => {});
 
@@ -61,7 +60,7 @@ function drawWorkshopBackground(painter, width, height) {
   return {
     floorY: projectY(portrait ? .69 : .68),
     spawnY: projectY(portrait ? .84 : .9),
-    avatarHeight: imageHeight * scale * (portrait ? .18 : .33),
+    avatarHeight: imageHeight * scale * (portrait ? .18 : .33) * 1.12,
     conceptBoard: {
       bounds: projectRect(portrait ? [99,805,252,165] : [520,225,256,161]),
       papers: papers.map(projectRect),
@@ -84,6 +83,8 @@ function renderDoeRoom() {
   const top = -Math.floor((height - 510) * .45);
   const bottom = top + height;
   canvas.width = width; canvas.height = height;
+  museumForeground.width = width;
+  museumForeground.height = height;
   ctx.imageSmoothingEnabled = false;
   const background = document.createElement('canvas');
   background.width = width; background.height = height;
@@ -103,30 +104,28 @@ function renderDoeRoom() {
   canvas.dispatchEvent(new CustomEvent('galleryresize'));
 }
 
-// Source bounds exclude transparent gutters and align the poses at the feet.
-// All four original frames remain in the unmodified, transparent PNG sheet.
+// Each row contains one idle pose followed by four walking poses.
+// Shared vertical crops keep the antlers and foot baseline steady through each cycle.
 const doeSpriteFrames = [
-  [193, 16, 288, 543], [773, 16, 287, 543],
-  [194, 649, 288, 542], [772, 650, 288, 543],
+  [85, 10, 209, 466], [389, 10, 209, 466], [676, 10, 210, 466],
+  [965, 10, 210, 466], [1254, 10, 208, 466],
 ];
-// Rear poses use the supplied sheet, cropped to each silhouette and foot baseline.
 const doeBackSpriteFrames = [
-  [192, 14, 294, 547], [767, 14, 294, 550],
-  [192, 644, 294, 544], [767, 644, 294, 547],
+  [85, 523, 208, 466], [384, 523, 209, 466], [673, 523, 208, 466],
+  [961, 523, 208, 466], [1249, 523, 209, 466],
 ];
-function drawDoePlayer(phase, bob, perspective) {
+function drawDoePlayer(phase, bob, perspective, painter) {
   const frames = player.back ? doeBackSpriteFrames : doeSpriteFrames;
-  const sprite = player.back ? doeArt.backSprite : doeArt.sprite;
-  const [x, y, width, height] = frames[phase];
-  const spriteScale = scene.avatarHeight / (player.back ? 547 : 543);
-  ctx.save();
-  ctx.translate(Math.round(player.x), Math.round(player.y));
-  ctx.fillStyle = '#00000065';
+  const [x, y, width, height] = frames[route.length ? phase + 1 : 0];
+  const spriteScale = scene.avatarHeight / 466;
+  painter.save();
+  painter.translate(Math.round(player.x), Math.round(player.y));
+  painter.fillStyle = '#00000065';
   const shadowWidth = scene.avatarHeight * .22 * perspective;
-  ctx.fillRect(-shadowWidth / 2, -2, shadowWidth, 5);
-  ctx.scale(player.facing * perspective, perspective);
-  ctx.drawImage(sprite, x, y, width, height,
+  painter.fillRect(-shadowWidth / 2, -2, shadowWidth, 5);
+  painter.scale(player.facing * perspective, perspective);
+  painter.drawImage(doeArt.sprite, x, y, width, height,
       -width * spriteScale / 2, -height * spriteScale + bob,
       width * spriteScale, height * spriteScale);
-  ctx.restore();
+  painter.restore();
 }

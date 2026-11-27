@@ -109,7 +109,7 @@ function drawPlayer(painter) {
   const bob = moving && !reducedMotion.matches && phase % 2 ? -1 : 0;
   const perspective = clamp(.86 + (player.y - floorTop()) / 650, .86, 1.25);
   if (activeScene === 'doe') {
-    drawDoePlayer(phase, bob, perspective);
+    drawDoePlayer(phase, bob, perspective, painter);
     return;
   }
   painter.save();
@@ -180,6 +180,11 @@ function paintScene(time = performance.now()) {
     if (player.y < 430) paintAvatar(foreground);
     foreground.drawImage(scene.bench, 0, 0);
     if (player.y >= 430) paintAvatar(foreground);
+  } else if (activeScene === 'doe') {
+    const foreground = museumForeground.getContext('2d');
+    foreground.clearRect(0, 0, museumForeground.width, museumForeground.height);
+    foreground.imageSmoothingEnabled = false;
+    paintAvatar(foreground);
   } else paintAvatar(ctx);
 }
 
@@ -405,6 +410,7 @@ function playDoeSmoke(covering) {
 }
 
 function updateSceneControls() {
+  canvas.parentElement.classList.toggle('is-doe-world', activeScene === 'doe');
   doeFinalPoster.hidden = activeScene !== 'doe' || !scene.finalPoster;
   if (!doeFinalPoster.hidden) {
     const { left, right, top, bottom } = scene.finalPoster;
